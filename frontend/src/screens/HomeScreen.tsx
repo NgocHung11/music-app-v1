@@ -49,17 +49,19 @@ export default function HomeScreen() {
     try {
       const [topRes, albumRes, artistRes, genreRes, recentRes] = await Promise.all([
         songApi.getTopSongs(topPeriod, 10),
-        albumApi.getNewReleases(8),
-        artistApi.getPopular(10),
+        albumApi.getAll({ limit: 8 }),
+        artistApi.getAll({ limit: 10 }),
         genreApi.getAll(),
         songApi.getAll({ limit: 10 }),
       ])
 
-      setTopSongs(topRes.data.songs ?? [])
-      setNewAlbums(albumRes.data.albums ?? [])
-      setPopularArtists(artistRes.data.artists ?? [])
-      setGenres(genreRes.data.genres ?? [])
-      setRecentSongs(recentRes.data.songs ?? [])
+      const topSongsData = topRes.data.songs || []
+      // TopSongs có thể trả về format khác (với song nested)
+      setTopSongs(topSongsData.map((item: any) => item.song || item))
+      setNewAlbums(albumRes.data.albums || [])
+      setPopularArtists(artistRes.data.artists || [])
+      setGenres(genreRes.data.genres || [])
+      setRecentSongs(recentRes.data.songs || [])
     } catch (error) {
       console.warn("fetchData error", error)
     } finally {
@@ -125,9 +127,6 @@ export default function HomeScreen() {
               <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.navigate("Search")}>
                 <Ionicons name="search" size={22} color="#fff" />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.navigate("Notifications")}>
-                <Ionicons name="notifications-outline" size={22} color="#fff" />
-              </TouchableOpacity>
             </View>
           </View>
         </LinearGradient>
@@ -137,7 +136,7 @@ export default function HomeScreen() {
           <SectionHeader
             title="Top Songs"
             subtitle={`Top of the ${topPeriod}`}
-            onSeeAll={() => navigation.navigate("TopSongs", { period: topPeriod })}
+            onSeeAll={() => navigation.navigate("Songs")}
           />
 
           {/* Period Filter */}
@@ -155,69 +154,91 @@ export default function HomeScreen() {
             ))}
           </View>
 
-          <FlatList
-            data={topSongs.slice(0, 6)}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(item) => item._id}
-            contentContainerStyle={{ paddingHorizontal: 20 }}
-            renderItem={({ item, index }) => (
-              <SongCard song={item} rank={index + 1} onPress={() => handlePlayTopSong(index)} />
-            )}
-          />
+          {topSongs.length > 0 ? (
+            <FlatList
+              data={topSongs.slice(0, 6)}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(item) => item._id}
+              contentContainerStyle={{ paddingHorizontal: 20 }}
+              renderItem={({ item, index }) => (
+                <SongCard song={item} rank={index + 1} onPress={() => handlePlayTopSong(index)} />
+              )}
+            />
+          ) : (
+            <Text style={styles.emptyText}>No top songs available</Text>
+          )}
         </View>
 
         {/* Genres Section */}
         <View>
           <SectionHeader title="Browse by Genre" />
-          <FlatList
-            data={genres}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(item) => item._id}
-            contentContainerStyle={{ paddingHorizontal: 20 }}
-            renderItem={({ item }) => (
-              <GenreCard genre={item} onPress={() => navigation.navigate("Genre", { genre: item })} />
-            )}
-          />
+          {genres.length > 0 ? (
+            <FlatList
+              data={genres}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(item) => item._id}
+              contentContainerStyle={{ paddingHorizontal: 20 }}
+              renderItem={({ item }) => (
+                <GenreCard genre={item} onPress={() => navigation.navigate("Genre", { genreId: item._id })} />
+              )}
+            />
+          ) : (
+            <Text style={styles.emptyText}>No genres available</Text>
+          )}
         </View>
 
         {/* New Albums Section */}
         <View>
-          <SectionHeader title="New Releases" subtitle="Latest albums" onSeeAll={() => navigation.navigate("Albums")} />
-          <FlatList
-            data={newAlbums}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(item) => item._id}
-            contentContainerStyle={{ paddingHorizontal: 20 }}
-            renderItem={({ item }) => (
-              <AlbumCard album={item} onPress={() => navigation.navigate("Album", { album: item })} />
-            )}
-          />
+          <SectionHeader title="New Releases" subtitle="Latest albums" />
+          {newAlbums.length > 0 ? (
+            <FlatList
+              data={newAlbums}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(item) => item._id}
+              contentContainerStyle={{ paddingHorizontal: 20 }}
+              renderItem={({ item }) => (
+                <AlbumCard album={item} onPress={() => navigation.navigate("Album", { albumId: item._id })} />
+              )}
+            />
+          ) : (
+            <Text style={styles.emptyText}>No albums available</Text>
+          )}
         </View>
 
         {/* Popular Artists Section */}
         <View>
-          <SectionHeader title="Popular Artists" onSeeAll={() => navigation.navigate("Artists")} />
-          <FlatList
-            data={popularArtists}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(item) => item._id}
-            contentContainerStyle={{ paddingHorizontal: 20 }}
-            renderItem={({ item }) => (
-              <ArtistCard artist={item} onPress={() => navigation.navigate("Artist", { artist: item })} />
-            )}
-          />
+          <SectionHeader title="Popular Artists" />
+          {popularArtists.length > 0 ? (
+            <FlatList
+              data={popularArtists}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(item) => item._id}
+              contentContainerStyle={{ paddingHorizontal: 20 }}
+              renderItem={({ item }) => (
+                <ArtistCard artist={item} onPress={() => navigation.navigate("Artist", { artistId: item._id })} />
+              )}
+            />
+          ) : (
+            <Text style={styles.emptyText}>No artists available</Text>
+          )}
         </View>
 
         {/* Recently Added Section */}
         <View>
           <SectionHeader title="Recently Added" />
-          {recentSongs.slice(0, 5).map((song, index) => (
-            <SongItem key={song._id} song={song} index={index} onPress={() => handlePlayRecentSong(index)} />
-          ))}
+          {recentSongs.length > 0 ? (
+            recentSongs
+              .slice(0, 5)
+              .map((song, index) => (
+                <SongItem key={song._id} song={song} index={index} onPress={() => handlePlayRecentSong(index)} />
+              ))
+          ) : (
+            <Text style={styles.emptyText}>No songs available</Text>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -297,5 +318,12 @@ const styles = StyleSheet.create({
   },
   periodTextActive: {
     color: "#fff",
+  },
+  emptyText: {
+    color: COLORS.textSecondary,
+    fontSize: 14,
+    textAlign: "center",
+    paddingVertical: 20,
+    paddingHorizontal: 20,
   },
 })

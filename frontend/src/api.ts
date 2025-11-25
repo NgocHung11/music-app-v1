@@ -3,26 +3,43 @@ import * as SecureStore from "expo-secure-store"
 import { getAccessToken, setAccessToken } from "./context/tokenHelper"
 import type { Song, Album, Artist, Genre, Playlist, User, TopSongsResponse, PlayHistory, Favorite } from "./types"
 
-export const API_BASE = process.env.API_BASE || "http://192.168.1.191:5001"
+/**
+ * CẤU HÌNH API_BASE:
+ * - Android Emulator: http://10.0.2.2:5001
+ * - iOS Simulator: http://localhost:5001
+ * - Thiết bị thật: http://<IP_MÁY_TÍNH>:5001
+ *   (Chạy "ipconfig" trên Windows hoặc "ifconfig" trên Mac để lấy IP)
+ *
+ * Thay đổi IP này thành IP máy tính của bạn
+ * Ví dụ: nếu IP là 192.168.1.10 thì đổi thành "http://192.168.1.10:5001"
+ */
+export const API_BASE = process.env.API_BASE || "http://192.168.1.5:5001" // Android Emulator
+// export const API_BASE = "http://localhost:5001" // iOS Simulator
+// export const API_BASE = "http://YOUR_IP:5001" // Thiết bị thật - thay YOUR_IP bằng IP máy tính
 
 const api = axios.create({
   baseURL: API_BASE + "/api",
   headers: {
     "Content-Type": "application/json",
   },
+  timeout: 10000, // Thêm timeout 10 giây
   withCredentials: true,
 })
 
 // Request interceptor - thêm token vào header
 api.interceptors.request.use(
   async (config) => {
+    console.log(`[v0] API Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`)
     const token = await getAccessToken()
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`
     }
     return config
   },
-  (err) => Promise.reject(err),
+  (err) => {
+    console.log("[v0] API Request Error:", err.message)
+    return Promise.reject(err)
+  },
 )
 
 // Response interceptor - xử lý refresh token
@@ -203,14 +220,20 @@ export const userApi = {
 
 // ========== AUTH API ==========
 export const authApi = {
-  signIn: (username: string, password: string) => axios.post(`${API_BASE}/api/auth/signin`, { username, password }),
+  signIn: (username: string, password: string) => {
+    console.log(`[v0] SignIn API call to: ${API_BASE}/api/auth/signin`)
+    return axios.post(`${API_BASE}/api/auth/signin`, { username, password }, { timeout: 10000 })
+  },
 
-  signUp: (data: { username: string; password: string; email: string; firstName?: string; lastName?: string }) =>
-    axios.post(`${API_BASE}/api/auth/signup`, data),
+  signUp: (data: { username: string; password: string; email: string; firstName?: string; lastName?: string }) => {
+    console.log(`[v0] SignUp API call to: ${API_BASE}/api/auth/signup`)
+    console.log(`[v0] SignUp data:`, JSON.stringify(data))
+    return axios.post(`${API_BASE}/api/auth/signup`, data, { timeout: 10000 })
+  },
 
-  signOut: (refreshToken: string) => axios.post(`${API_BASE}/api/auth/signout`, { refreshToken }),
+  signOut: (refreshToken: string) => axios.post(`${API_BASE}/api/auth/signout`, { refreshToken }, { timeout: 10000 }),
 
-  refresh: (refreshToken: string) => axios.post(`${API_BASE}/api/auth/refresh`, { refreshToken }),
+  refresh: (refreshToken: string) => axios.post(`${API_BASE}/api/auth/refresh`, { refreshToken }, { timeout: 10000 }),
 }
 
 export default api

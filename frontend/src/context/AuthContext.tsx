@@ -82,10 +82,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     firstName?: string
     lastName?: string
   }) => {
-    await authApi.signUp({
-      ...payload,
-      username: payload.username.trim().toLowerCase(),
-    })
+    try {
+      const response = await authApi.signUp({
+        username: payload.username,
+        password: payload.password,
+        email: payload.email,
+        firstName: payload.firstName || "",
+        lastName: payload.lastName || "",
+      })
+      console.log("[v0] SignUp response:", response.data)
+      return response.data
+    } catch (error: any) {
+      console.log("[v0] SignUp error in AuthContext:", error.response?.data || error.message)
+      // Re-throw để component có thể catch và hiển thị message
+      throw error
+    }
   }
 
   const signOut = async () => {

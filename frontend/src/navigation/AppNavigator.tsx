@@ -22,6 +22,12 @@ import HistoryScreen from "../screens/HistoryScreen"
 import LikedSongsScreen from "../screens/LikedSongsScreen"
 import EditProfileScreen from "../screens/EditProfileScreen"
 
+import AlbumsScreen from "../screens/AlbumsScreen"
+import ArtistsScreen from "../screens/ArtistsScreen"
+import TopSongsScreen from "../screens/TopSongsScreen"
+import ArtistSongsScreen from "../screens/ArtistSongsScreen"
+import ArtistAlbumsScreen from "../screens/ArtistAlbumsScreen"
+
 const Stack = createNativeStackNavigator()
 
 function AuthStack() {
@@ -45,6 +51,11 @@ function MainStack() {
       <Stack.Screen name="History" component={HistoryScreen} />
       <Stack.Screen name="LikedSongs" component={LikedSongsScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+      <Stack.Screen name="Albums" component={AlbumsScreen} />
+      <Stack.Screen name="Artists" component={ArtistsScreen} />
+      <Stack.Screen name="TopSongs" component={TopSongsScreen} />
+      <Stack.Screen name="ArtistSongs" component={ArtistSongsScreen} />
+      <Stack.Screen name="ArtistAlbums" component={ArtistAlbumsScreen} />
     </Stack.Navigator>
   )
 }
