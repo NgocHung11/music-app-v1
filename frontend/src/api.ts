@@ -4,7 +4,7 @@ import * as SecureStore from "expo-secure-store";
 import { getAccessToken, setAccessToken } from "./context/tokenHelper"; 
 
 
-export const API_BASE = process.env.API_BASE || "http://192.168.1.25:5001"; 
+export const API_BASE = process.env.API_BASE || "http://192.168.1.191:5001"; 
 
 const api = axios.create({
   baseURL: API_BASE + "/api",
