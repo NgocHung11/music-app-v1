@@ -1,10 +1,9 @@
+import axios from "axios"
+import * as SecureStore from "expo-secure-store"
+import { getAccessToken, setAccessToken } from "./context/tokenHelper"
+import type { Song, Album, Artist, Genre, Playlist, User, TopSongsResponse, PlayHistory, Favorite } from "./types"
 
-import axios from "axios";
-import * as SecureStore from "expo-secure-store";
-import { getAccessToken, setAccessToken } from "./context/tokenHelper"; 
-
-
-export const API_BASE = process.env.API_BASE || "http://192.168.1.25:5001"; 
+export const API_BASE = process.env.API_BASE || "http://192.168.1.191:5001"
 
 const api = axios.create({
   baseURL: API_BASE + "/api",
@@ -12,72 +11,206 @@ const api = axios.create({
     "Content-Type": "application/json",
   },
   withCredentials: true,
-});
+})
 
+// Request interceptor - thêm token vào header
 api.interceptors.request.use(
   async (config) => {
-    const token = await getAccessToken();
+    const token = await getAccessToken()
     if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
+      config.headers.Authorization = `Bearer ${token}`
     }
-    return config;
+    return config
   },
-  (err) => Promise.reject(err)
-);
+  (err) => Promise.reject(err),
+)
 
-let isRefreshing = false;
-let failedQueue: { resolve: (v?: any) => void; reject: (e?: any) => void; config: any }[] = [];
+// Response interceptor - xử lý refresh token
+let isRefreshing = false
+let failedQueue: { resolve: (v?: any) => void; reject: (e?: any) => void; config: any }[] = []
 
 const processQueue = (error: any, token: string | null = null) => {
   failedQueue.forEach((p) => {
-    if (error) p.reject(error);
+    if (error) p.reject(error)
     else {
-      if (p.config.headers) p.config.headers.Authorization = `Bearer ${token}`;
-      p.resolve(api(p.config));
+      if (p.config.headers) p.config.headers.Authorization = `Bearer ${token}`
+      p.resolve(api(p.config))
     }
-  });
-  failedQueue = [];
-};
+  })
+  failedQueue = []
+}
 
 api.interceptors.response.use(
   (res) => res,
   async (err) => {
-    const originalRequest = err.config;
+    const originalRequest = err.config
     if (err.response && err.response.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
-        return new Promise(function (resolve, reject) {
-          failedQueue.push({ resolve, reject, config: originalRequest });
-        });
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject, config: originalRequest })
+        })
       }
 
-      originalRequest._retry = true;
-      isRefreshing = true;
+      originalRequest._retry = true
+      isRefreshing = true
       try {
-        const refreshToken = await SecureStore.getItemAsync("refreshToken");
-        if (!refreshToken) throw new Error("No refresh token");
+        const refreshToken = await SecureStore.getItemAsync("refreshToken")
+        if (!refreshToken) throw new Error("No refresh token")
 
         const r = await axios.post(
           API_BASE + "/api/auth/refresh",
           { refreshToken },
-          { headers: { "Content-Type": "application/json" } }
-        );
+          { headers: { "Content-Type": "application/json" } },
+        )
 
-        const newAccessToken = r.data.accessToken;
-        await setAccessToken(newAccessToken);
+        const newAccessToken = r.data.accessToken
+        await setAccessToken(newAccessToken)
 
-        processQueue(null, newAccessToken);
-        isRefreshing = false;
+        processQueue(null, newAccessToken)
+        isRefreshing = false
 
-        if (originalRequest.headers) originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-        return api(originalRequest);
+        if (originalRequest.headers) originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
+        return api(originalRequest)
       } catch (e) {
-        processQueue(e as any, null);
-        isRefreshing = false;
-        return Promise.reject(e);
+        processQueue(e as any, null)
+        isRefreshing = false
+        return Promise.reject(e)
       }
     }
-    return Promise.reject(err);
-  }
-);
+    return Promise.reject(err)
+  },
+)
 
-export default api;
+// ========== SONGS API ==========
+export const songApi = {
+  getAll: (params?: { page?: number; limit?: number; genre?: string; artist?: string; album?: string; q?: string }) =>
+    api.get<{ songs: Song[]; pagination: any }>("/songs", { params }),
+
+  getById: (id: string) => api.get<{ song: Song }>(`/songs/${id}`),
+
+  getTopSongs: (period: "day" | "week" | "month" = "week", limit = 10) =>
+    api.get<TopSongsResponse>(`/songs/top/${period}`, { params: { limit } }),
+
+  search: (q: string) => api.get<{ songs: Song[] }>("/songs", { params: { q } }),
+
+  recordPlay: (songId: string, duration: number) => api.post(`/songs/${songId}/play`, { duration }),
+}
+
+// ========== ALBUMS API ==========
+export const albumApi = {
+  getAll: (params?: { page?: number; limit?: number; artist?: string; genre?: string }) =>
+    api.get<{ albums: Album[]; pagination: any }>("/albums", { params }),
+
+  getById: (id: string) => api.get<{ album: Album }>(`/albums/${id}`),
+
+  getSongs: (id: string) => api.get<{ songs: Song[] }>(`/albums/${id}/songs`),
+
+  getNewReleases: (limit = 10) => api.get<{ albums: Album[] }>("/albums", { params: { limit, sort: "-releaseDate" } }),
+}
+
+// ========== ARTISTS API ==========
+export const artistApi = {
+  getAll: (params?: { page?: number; limit?: number; q?: string }) =>
+    api.get<{ artists: Artist[]; pagination: any }>("/artists", { params }),
+
+  getById: (id: string) => api.get<{ artist: Artist }>(`/artists/${id}`),
+
+  getSongs: (id: string, params?: { page?: number; limit?: number }) =>
+    api.get<{ songs: Song[]; pagination: any }>(`/artists/${id}/songs`, { params }),
+
+  getAlbums: (id: string) => api.get<{ albums: Album[] }>(`/artists/${id}/albums`),
+
+  getPopular: (limit = 10) => api.get<{ artists: Artist[] }>("/artists", { params: { limit, sort: "-followers" } }),
+}
+
+// ========== GENRES API ==========
+export const genreApi = {
+  getAll: () => api.get<{ genres: Genre[] }>("/genres"),
+
+  getById: (id: string) => api.get<{ genre: Genre }>(`/genres/${id}`),
+
+  getSongs: (id: string, params?: { page?: number; limit?: number }) =>
+    api.get<{ songs: Song[]; pagination: any }>(`/genres/${id}/songs`, { params }),
+
+  getAlbums: (id: string) => api.get<{ albums: Album[] }>(`/genres/${id}/albums`),
+}
+
+// ========== PLAYLISTS API ==========
+export const playlistApi = {
+  getMyPlaylists: () => api.get<{ playlists: Playlist[] }>("/playlists/me"),
+
+  getById: (id: string) => api.get<{ playlist: Playlist }>(`/playlists/${id}`),
+
+  create: (data: { name: string; description?: string; isPublic?: boolean }) =>
+    api.post<{ playlist: Playlist }>("/playlists", data),
+
+  update: (id: string, data: { name?: string; description?: string; isPublic?: boolean }) =>
+    api.put<{ playlist: Playlist }>(`/playlists/${id}`, data),
+
+  delete: (id: string) => api.delete(`/playlists/${id}`),
+
+  addSong: (playlistId: string, songId: string) =>
+    api.post<{ playlist: Playlist }>(`/playlists/${playlistId}/songs`, { songId }),
+
+  removeSong: (playlistId: string, songId: string) => api.delete(`/playlists/${playlistId}/songs/${songId}`),
+
+  reorderSongs: (playlistId: string, songIds: string[]) => api.put(`/playlists/${playlistId}/reorder`, { songIds }),
+}
+
+// ========== FAVORITES API ==========
+export const favoriteApi = {
+  getAll: (type?: "song" | "album" | "artist" | "playlist") =>
+    api.get<{ favorites: Favorite[] }>("/favorites", { params: { type } }),
+
+  add: (itemType: "song" | "album" | "artist" | "playlist", itemId: string) =>
+    api.post<{ favorite: Favorite }>("/favorites", { itemType, itemId }),
+
+  remove: (itemType: "song" | "album" | "artist" | "playlist", itemId: string) =>
+    api.delete(`/favorites/${itemType}/${itemId}`),
+
+  check: (itemType: "song" | "album" | "artist" | "playlist", itemId: string) =>
+    api.get<{ isFavorite: boolean }>(`/favorites/check/${itemType}/${itemId}`),
+
+  getLikedSongs: () => api.get<{ songs: Song[] }>("/favorites/songs"),
+
+  getLikedAlbums: () => api.get<{ albums: Album[] }>("/favorites/albums"),
+
+  getLikedArtists: () => api.get<{ artists: Artist[] }>("/favorites/artists"),
+}
+
+// ========== USER API ==========
+export const userApi = {
+  getProfile: () => api.get<{ user: User }>("/users/me"),
+
+  updateProfile: (data: { firstName?: string; lastName?: string; avatar?: string }) =>
+    api.put<{ user: User }>("/users/me", data),
+
+  changePassword: (data: { currentPassword: string; newPassword: string }) => api.put("/users/me/password", data),
+
+  getHistory: (params?: { page?: number; limit?: number }) =>
+    api.get<{ history: PlayHistory[]; pagination: any }>("/users/me/history", { params }),
+
+  clearHistory: () => api.delete("/users/me/history"),
+
+  getStats: () =>
+    api.get<{
+      totalListeningTime: number
+      totalSongsPlayed: number
+      totalPlaylists: number
+      favoriteGenre: string
+    }>("/users/me/stats"),
+}
+
+// ========== AUTH API ==========
+export const authApi = {
+  signIn: (username: string, password: string) => axios.post(`${API_BASE}/api/auth/signin`, { username, password }),
+
+  signUp: (data: { username: string; password: string; email: string; firstName?: string; lastName?: string }) =>
+    axios.post(`${API_BASE}/api/auth/signup`, data),
+
+  signOut: (refreshToken: string) => axios.post(`${API_BASE}/api/auth/signout`, { refreshToken }),
+
+  refresh: (refreshToken: string) => axios.post(`${API_BASE}/api/auth/refresh`, { refreshToken }),
+}
+
+export default api
