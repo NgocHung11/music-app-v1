@@ -120,14 +120,16 @@ export interface TopSongsResponse {
 }
 
 // Helper functions để lấy thông tin từ populated hoặc unpopulated fields
-export const getArtistName = (artist: Artist | string): string => {
+export const getArtistName = (artist: Artist | string | null | undefined): string => {
+  if (!artist) return "Unknown Artist"
   if (typeof artist === "string") return "Unknown Artist"
-  return artist.name
+  return artist.name || "Unknown Artist"
 }
 
-export const getArtistId = (artist: Artist | string): string => {
+export const getArtistId = (artist: Artist | string | null | undefined): string => {
+  if (!artist) return ""
   if (typeof artist === "string") return artist
-  return artist._id
+  return artist._id || ""
 }
 
 export const getAlbumTitle = (album?: Album | string): string => {

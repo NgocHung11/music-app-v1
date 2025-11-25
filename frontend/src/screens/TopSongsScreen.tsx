@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useRef } from "react"
 import { View, Text, FlatList, RefreshControl, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { SafeAreaView } from "react-native-safe-area-context"
@@ -20,30 +20,46 @@ export default function TopSongsScreen() {
 
     const { playSongs } = usePlayer()
     const [songs, setSongs] = useState<Song[]>([])
-    const [loading, setLoading] = useState(true)
+    const [initialLoading, setInitialLoading] = useState(true)
+    const [switching, setSwitching] = useState(false)
     const [refreshing, setRefreshing] = useState(false)
     const [period, setPeriod] = useState<TopPeriod>(initialPeriod)
+    const isFirstLoad = useRef(true)
 
-    const fetchTopSongs = useCallback(async () => {
-        try {
-            setLoading(true)
-            const res = await songApi.getTopSongs(period, 50)
-            setSongs(res.data.songs ?? [])
-        } catch (error) {
-            console.warn("fetchTopSongs error", error)
-        } finally {
-            setLoading(false)
-            setRefreshing(false)
+    const fetchTopSongs = useCallback(
+        async (isInitial = false) => {
+            try {
+                if (isInitial) {
+                    setInitialLoading(true)
+                } else {
+                    setSwitching(true)
+                }
+                const res = await songApi.getTopSongs(period, 50)
+                const topSongsData = res.data.songs ?? []
+                setSongs(topSongsData.map((item: any) => item.song || item).filter(Boolean))
+            } catch (error) {
+                console.warn("fetchTopSongs error", error)
+            } finally {
+                setInitialLoading(false)
+                setSwitching(false)
+                setRefreshing(false)
+            }
+        },
+        [period],
+    )
+
+    useEffect(() => {
+        if (isFirstLoad.current) {
+            isFirstLoad.current = false
+            fetchTopSongs(true)
+        } else {
+            fetchTopSongs(false)
         }
     }, [period])
 
-    useEffect(() => {
-        fetchTopSongs()
-    }, [fetchTopSongs])
-
     const onRefresh = async () => {
         setRefreshing(true)
-        await fetchTopSongs()
+        await fetchTopSongs(false)
     }
 
     const handlePlaySong = (index: number) => {
@@ -56,7 +72,7 @@ export default function TopSongsScreen() {
         }
     }
 
-    if (loading) {
+    if (initialLoading) {
         return (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={COLORS.primary} />
@@ -84,25 +100,27 @@ export default function TopSongsScreen() {
                         key={p}
                         style={[styles.periodBtn, period === p && styles.periodBtnActive]}
                         onPress={() => setPeriod(p)}
+                        disabled={switching}
                     >
                         <Text style={[styles.periodText, period === p && styles.periodTextActive]}>
-                            {p.charAt(0).toUpperCase() + p.slice(1)}
+                            {p === "day" ? "Day" : p === "week" ? "Week" : "Month"}
                         </Text>
                     </TouchableOpacity>
                 ))}
+                {switching && <ActivityIndicator size="small" color={COLORS.primary} style={styles.switchingIndicator} />}
             </View>
 
             <FlatList
                 data={songs}
                 keyExtractor={(item) => item._id}
-                contentContainerStyle={styles.listContent}
+                contentContainerStyle={[styles.listContent, switching && styles.listContentSwitching]}
                 showsVerticalScrollIndicator={false}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
                 renderItem={({ item, index }) => <SongItem song={item} index={index} onPress={() => handlePlaySong(index)} />}
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
                         <Ionicons name="musical-notes-outline" size={64} color={COLORS.textSecondary} />
-                        <Text style={styles.emptyText}>No songs found</Text>
+                        <Text style={styles.emptyText}>Không có bài hát</Text>
                     </View>
                 }
             />
@@ -151,6 +169,7 @@ const styles = StyleSheet.create({
     },
     periodFilter: {
         flexDirection: "row",
+        alignItems: "center",
         paddingHorizontal: 16,
         marginBottom: 16,
         gap: 8,
@@ -175,8 +194,14 @@ const styles = StyleSheet.create({
     periodTextActive: {
         color: "#fff",
     },
+    switchingIndicator: {
+        marginLeft: 8,
+    },
     listContent: {
         paddingBottom: 140,
+    },
+    listContentSwitching: {
+        opacity: 0.6,
     },
     emptyContainer: {
         flex: 1,

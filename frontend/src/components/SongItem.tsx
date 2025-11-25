@@ -23,6 +23,10 @@ const SongItem: React.FC<Props> = ({ song, onPress, showMenu = true, onMenuPress
   const { currentSong, isPlaying, isLoading } = usePlayer()
   const [imageError, setImageError] = useState(false)
 
+  if (!song) {
+    return null
+  }
+
   const isCurrentSong = currentSong?._id === song._id
   const isThisSongLoading = isCurrentSong && isLoading
 

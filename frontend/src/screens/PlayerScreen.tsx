@@ -1,6 +1,17 @@
 "use client"
 
-import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator } from "react-native"
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+  ActivityIndicator,
+  Modal,
+  FlatList,
+  Alert,
+} from "react-native"
 import { usePlayer } from "../context/PlayerContext"
 import { useFavorite } from "../hooks/useFavorite"
 import { Ionicons } from "@expo/vector-icons"
@@ -9,6 +20,8 @@ import { useNavigation } from "@react-navigation/native"
 import ProgressBar from "../components/ProgressBar"
 import { COLORS, GRADIENTS, BORDER_RADIUS, SHADOWS } from "../constants/theme"
 import { useState } from "react"
+import { playlistApi } from "../api"
+import type { Playlist } from "../types"
 
 const { width } = Dimensions.get("window")
 
@@ -34,13 +47,66 @@ export default function PlayerScreen() {
   const { isFavorite, toggleFavorite } = useFavorite("song", currentSong?._id || "")
   const [imageError, setImageError] = useState(false)
 
+  const [showPlaylistModal, setShowPlaylistModal] = useState(false)
+  const [playlists, setPlaylists] = useState<Playlist[]>([])
+  const [loadingPlaylists, setLoadingPlaylists] = useState(false)
+  const [addingToPlaylist, setAddingToPlaylist] = useState<string | null>(null)
+
+  const fetchPlaylists = async () => {
+    setLoadingPlaylists(true)
+    try {
+      const res = await playlistApi.getMyPlaylists()
+      console.log("[v0] PlayerScreen raw response:", JSON.stringify(res.data))
+      const playlistsData = res.data?.playlists ?? res.data ?? []
+      console.log("[v0] PlayerScreen playlists fetched:", Array.isArray(playlistsData) ? playlistsData.length : 0)
+      setPlaylists(Array.isArray(playlistsData) ? playlistsData : [])
+    } catch (error) {
+      console.warn("[v0] fetchPlaylists error", error)
+    } finally {
+      setLoadingPlaylists(false)
+    }
+  }
+
+  const handleOpenPlaylistModal = () => {
+    setShowPlaylistModal(true)
+    fetchPlaylists()
+  }
+
+  const handleAddToPlaylist = async (playlistId: string) => {
+    if (!currentSong) return
+
+    setAddingToPlaylist(playlistId)
+    try {
+      await playlistApi.addSong(playlistId, currentSong._id)
+      Alert.alert("Success", "Song added to playlist")
+      setShowPlaylistModal(false)
+    } catch (error: any) {
+      if (error.response?.status === 400) {
+        Alert.alert("Already added", "This song is already in the playlist")
+      } else {
+        Alert.alert("Error", "Failed to add song to playlist")
+      }
+    } finally {
+      setAddingToPlaylist(null)
+    }
+  }
+
+  const handleNavigateToPlaylist = (playlistId: string) => {
+    setShowPlaylistModal(false)
+    // Navigate to Library tab first, then to Playlist screen
+    navigation.navigate("Library", {
+      screen: "Playlist",
+      params: { playlistId },
+    })
+  }
+
   if (!currentSong) {
     return (
       <LinearGradient colors={GRADIENTS.background} style={styles.emptyContainer}>
         <Ionicons name="headset-outline" size={96} color={COLORS.primary} style={{ marginBottom: 24 }} />
         <Text style={styles.emptyTitle}>No song playing</Text>
         <Text style={styles.emptySubtitle}>Choose a song from your library to start listening</Text>
-        <TouchableOpacity style={styles.browseBtn} onPress={() => navigation.navigate("MainTabs", { screen: "Home" })}>
+        <TouchableOpacity style={styles.browseBtn} onPress={() => navigation.navigate("Home")}>
           <Text style={styles.browseBtnText}>Browse Music</Text>
         </TouchableOpacity>
       </LinearGradient>
@@ -148,10 +214,79 @@ export default function PlayerScreen() {
         <TouchableOpacity style={styles.actionBtn}>
           <Ionicons name="list" size={22} color={COLORS.textSecondary} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtn}>
+        <TouchableOpacity style={styles.actionBtn} onPress={handleOpenPlaylistModal}>
           <Ionicons name="add-circle-outline" size={22} color={COLORS.textSecondary} />
         </TouchableOpacity>
       </View>
+
+      <Modal visible={showPlaylistModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add to Playlist</Text>
+              <TouchableOpacity onPress={() => setShowPlaylistModal(false)}>
+                <Ionicons name="close" size={24} color={COLORS.text} />
+              </TouchableOpacity>
+            </View>
+
+            {loadingPlaylists ? (
+              <View style={styles.modalLoading}>
+                <ActivityIndicator size="large" color={COLORS.primary} />
+              </View>
+            ) : playlists.length === 0 ? (
+              <View style={styles.modalEmpty}>
+                <Ionicons name="list-outline" size={48} color={COLORS.textMuted} />
+                <Text style={styles.modalEmptyText}>No playlists yet</Text>
+                <TouchableOpacity
+                  style={styles.createPlaylistBtn}
+                  onPress={() => {
+                    setShowPlaylistModal(false)
+                    navigation.navigate("Library")
+                  }}
+                >
+                  <Text style={styles.createPlaylistBtnText}>Create Playlist</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <FlatList
+                data={playlists}
+                keyExtractor={(item) => item._id}
+                renderItem={({ item }) => {
+                  const songsCount = Array.isArray(item.songs) ? item.songs.length : 0
+                  return (
+                    <View style={styles.playlistItem}>
+                      <TouchableOpacity
+                        style={styles.playlistRowContent}
+                        onPress={() => handleNavigateToPlaylist(item._id)}
+                      >
+                        <LinearGradient colors={GRADIENTS.primary} style={styles.playlistIcon}>
+                          <Ionicons name="musical-notes" size={20} color="#fff" />
+                        </LinearGradient>
+                        <View style={styles.playlistInfo}>
+                          <Text style={styles.playlistName}>{item.name}</Text>
+                          <Text style={styles.playlistCount}>{songsCount} songs</Text>
+                        </View>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.addToPlaylistBtn}
+                        onPress={() => handleAddToPlaylist(item._id)}
+                        disabled={addingToPlaylist === item._id}
+                      >
+                        {addingToPlaylist === item._id ? (
+                          <ActivityIndicator size="small" color={COLORS.primary} />
+                        ) : (
+                          <Ionicons name="add-circle" size={28} color={COLORS.primary} />
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  )
+                }}
+                style={{ maxHeight: 300 }}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
     </LinearGradient>
   )
 }
@@ -324,5 +459,89 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderColor: COLORS.border,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: COLORS.backgroundLight,
+    borderTopLeftRadius: BORDER_RADIUS.xl,
+    borderTopRightRadius: BORDER_RADIUS.xl,
+    padding: 20,
+    maxHeight: "60%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
+  modalTitle: {
+    color: COLORS.text,
+    fontSize: 20,
+    fontWeight: "800",
+  },
+  modalLoading: {
+    paddingVertical: 40,
+    alignItems: "center",
+  },
+  modalEmpty: {
+    alignItems: "center",
+    paddingVertical: 40,
+  },
+  modalEmptyText: {
+    color: COLORS.textMuted,
+    fontSize: 16,
+    marginTop: 12,
+    marginBottom: 20,
+  },
+  createPlaylistBtn: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 24,
+  },
+  createPlaylistBtnText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  playlistItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  playlistRowContent: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  addToPlaylistBtn: {
+    padding: 8,
+  },
+  playlistIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: BORDER_RADIUS.sm,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  playlistInfo: {
+    flex: 1,
+    marginLeft: 14,
+  },
+  playlistName: {
+    color: COLORS.text,
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  playlistCount: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    marginTop: 2,
   },
 })

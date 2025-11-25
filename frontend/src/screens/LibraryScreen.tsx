@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useState, useCallback } from "react"
 import {
   View,
   Text,
@@ -16,7 +16,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient"
 import { Ionicons } from "@expo/vector-icons"
 import { SafeAreaView } from "react-native-safe-area-context"
-import { useNavigation } from "@react-navigation/native"
+import { useNavigation, useFocusEffect } from "@react-navigation/native"
 import { playlistApi, favoriteApi, userApi } from "../api"
 import { usePlayer } from "../context/PlayerContext"
 import type { Playlist, Song, Album, Artist } from "../types"
@@ -44,26 +44,39 @@ export default function LibraryScreen() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [playlistsRes, songsRes, albumsRes, artistsRes, historyRes] = await Promise.all([
-        playlistApi.getMyPlaylists(),
+      console.log("[v0] LibraryScreen: Starting to fetch data...")
+
+      const playlistsRes = await playlistApi.getMyPlaylists()
+      console.log("[v0] LibraryScreen raw playlists response:", JSON.stringify(playlistsRes.data))
+
+      const playlistsData = playlistsRes.data?.playlists ?? playlistsRes.data ?? []
+      console.log(
+        "[v0] LibraryScreen playlists count:",
+        Array.isArray(playlistsData) ? playlistsData.length : "not array",
+      )
+      setPlaylists(Array.isArray(playlistsData) ? playlistsData : [])
+
+      const [songsRes, albumsRes, artistsRes, historyRes] = await Promise.all([
         favoriteApi.getLikedSongs(),
         favoriteApi.getLikedAlbums(),
         favoriteApi.getLikedArtists(),
         userApi.getHistory({ limit: 20 }),
       ])
-      setPlaylists(playlistsRes.data.playlists ?? [])
-      setLikedSongs(songsRes.data.songs ?? [])
-      setLikedAlbums(albumsRes.data.albums ?? [])
-      setLikedArtists(artistsRes.data.artists ?? [])
-      setHistory(historyRes.data.history ?? [])
+
+      setLikedSongs(songsRes.data?.songs ?? [])
+      setLikedAlbums(albumsRes.data?.albums ?? [])
+      setLikedArtists(artistsRes.data?.artists ?? [])
+      setHistory(historyRes.data?.history ?? [])
     } catch (error) {
-      console.warn("fetchLibrary error", error)
+      console.warn("[v0] fetchLibrary error", error)
     }
   }, [])
 
-  useEffect(() => {
-    fetchData()
-  }, [fetchData])
+  useFocusEffect(
+    useCallback(() => {
+      fetchData()
+    }, [fetchData]),
+  )
 
   const onRefresh = async () => {
     setRefreshing(true)
@@ -81,12 +94,16 @@ export default function LibraryScreen() {
         name: newPlaylistName.trim(),
         description: newPlaylistDesc.trim(),
       })
-      setPlaylists((prev) => [...prev, res.data.playlist])
+      const newPlaylist = res.data?.playlist ?? res.data
+      console.log("[v0] Playlist created:", newPlaylist?.name)
+      if (newPlaylist) {
+        setPlaylists((prev) => [...prev, newPlaylist])
+      }
       setShowCreateModal(false)
       setNewPlaylistName("")
       setNewPlaylistDesc("")
     } catch (error) {
-      console.warn("Create playlist error", error)
+      console.warn("[v0] Create playlist error", error)
       Alert.alert("Error", "Failed to create playlist")
     }
   }
@@ -117,7 +134,10 @@ export default function LibraryScreen() {
   ]
 
   const renderPlaylistItem = ({ item }: { item: Playlist }) => {
-    const songs = (item.songs || []) as Song[]
+    const songsArray = (item.songs || []) as any[]
+    const songsCount = songsArray.length
+    const firstSong = songsArray.length > 0 ? songsArray[0].song || songsArray[0] : null
+
     return (
       <TouchableOpacity
         style={styles.playlistItem}
@@ -125,8 +145,8 @@ export default function LibraryScreen() {
         onLongPress={() => handleDeletePlaylist(item)}
       >
         <View style={styles.playlistCover}>
-          {songs.length > 0 ? (
-            <Image source={{ uri: getCoverImage(songs[0]) }} style={styles.playlistImage} />
+          {firstSong?.coverUrl ? (
+            <Image source={{ uri: firstSong.coverUrl }} style={styles.playlistImage} />
           ) : (
             <LinearGradient colors={GRADIENTS.primary} style={styles.playlistImage}>
               <Ionicons name="musical-notes" size={28} color="#fff" />
@@ -137,7 +157,7 @@ export default function LibraryScreen() {
           <Text style={styles.playlistName} numberOfLines={1}>
             {item.name}
           </Text>
-          <Text style={styles.playlistMeta}>{songs.length} songs</Text>
+          <Text style={styles.playlistMeta}>{songsCount} songs</Text>
         </View>
         <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
       </TouchableOpacity>
