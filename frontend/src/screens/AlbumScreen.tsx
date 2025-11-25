@@ -35,7 +35,7 @@ export default function AlbumScreen() {
   const [songs, setSongs] = useState<Song[]>([])
   const [loading, setLoading] = useState(true)
 
-  const { playSongs } = usePlayer()
+  const { playSongs, isPlaying, currentSong, togglePlay, shuffle, toggleShuffle } = usePlayer()
   const { isFavorite, toggleFavorite, loading: favLoading } = useFavorite("album", album?._id || "")
 
   useEffect(() => {
@@ -54,14 +54,27 @@ export default function AlbumScreen() {
     fetchAlbumData()
   }, [album?._id])
 
+  const isCurrentAlbumPlaying = () => {
+    if (!currentSong || songs.length === 0) return false
+    const albumSongIds = songs.map((s) => s._id)
+    return albumSongIds.includes(currentSong._id)
+  }
+
   const handlePlayAll = () => {
-    if (songs.length > 0) {
+    if (songs.length === 0) return
+    if (isCurrentAlbumPlaying()) {
+      togglePlay()
+    } else {
       playSongs(songs, 0)
     }
   }
 
   const handleShufflePlay = () => {
-    if (songs.length > 0) {
+    if (songs.length === 0) return
+    if (isCurrentAlbumPlaying()) {
+      toggleShuffle()
+    } else {
+      if (!shuffle) toggleShuffle()
       const randomIndex = Math.floor(Math.random() * songs.length)
       playSongs(songs, randomIndex)
     }
@@ -81,6 +94,10 @@ export default function AlbumScreen() {
       </View>
     )
   }
+
+  const isThisAlbumPlaying = isCurrentAlbumPlaying()
+  const showPauseIcon = isThisAlbumPlaying && isPlaying
+  const shuffleActive = isThisAlbumPlaying && shuffle
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -136,13 +153,16 @@ export default function AlbumScreen() {
             />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.shuffleBtn} onPress={handleShufflePlay}>
-            <Ionicons name="shuffle" size={22} color="#fff" />
+          <TouchableOpacity
+            style={[styles.shuffleBtn, shuffleActive && styles.shuffleBtnActive]}
+            onPress={handleShufflePlay}
+          >
+            <Ionicons name="shuffle" size={22} color={shuffleActive ? COLORS.primary : "#fff"} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.playAllBtn} onPress={handlePlayAll}>
             <LinearGradient colors={GRADIENTS.primary} style={styles.playAllGradient}>
-              <Ionicons name="play" size={28} color="#fff" />
+              <Ionicons name={showPauseIcon ? "pause" : "play"} size={28} color="#fff" />
             </LinearGradient>
           </TouchableOpacity>
 
@@ -271,6 +291,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderColor: COLORS.border,
+  },
+  shuffleBtnActive: {
+    borderColor: COLORS.primary,
+    backgroundColor: "rgba(74, 95, 217, 0.15)",
   },
   playAllBtn: {
     ...SHADOWS.primary,

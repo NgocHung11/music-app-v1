@@ -16,7 +16,7 @@ export default function ArtistSongsScreen() {
     const route = useRoute<any>()
     const { artist } = route.params as { artist: Artist }
 
-    const { playSongs } = usePlayer()
+    const { playSongs, isPlaying, currentSong, togglePlay } = usePlayer()
     const [songs, setSongs] = useState<Song[]>([])
     const [loading, setLoading] = useState(true)
     const [refreshing, setRefreshing] = useState(false)
@@ -67,11 +67,22 @@ export default function ArtistSongsScreen() {
         playSongs(songs, index)
     }
 
+    const isArtistSongsPlaying = () => {
+        if (!currentSong || songs.length === 0) return false
+        return songs.some((s) => s._id === currentSong._id)
+    }
+
     const handlePlayAll = () => {
-        if (songs.length > 0) {
+        if (songs.length === 0) return
+        if (isArtistSongsPlaying()) {
+            togglePlay()
+        } else {
             playSongs(songs, 0)
         }
     }
+
+    const isThisPlaying = isArtistSongsPlaying()
+    const showPauseIcon = isThisPlaying && isPlaying
 
     if (loading) {
         return (
@@ -93,7 +104,7 @@ export default function ArtistSongsScreen() {
                     <Text style={styles.subtitle}>All Songs</Text>
                 </View>
                 <TouchableOpacity style={styles.playAllBtn} onPress={handlePlayAll}>
-                    <Ionicons name="play" size={20} color="#fff" />
+                    <Ionicons name={showPauseIcon ? "pause" : "play"} size={20} color="#fff" />
                 </TouchableOpacity>
             </View>
 

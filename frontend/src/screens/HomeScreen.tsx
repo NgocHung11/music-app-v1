@@ -200,7 +200,8 @@ export default function HomeScreen() {
               keyExtractor={(item) => item._id}
               contentContainerStyle={{ paddingHorizontal: 20 }}
               renderItem={({ item }) => (
-                <AlbumCard album={item} onPress={() => navigation.navigate("Album", { albumId: item._id })} />
+                <AlbumCard album={item} onPress={() => navigation.navigate("Album", { album: item, albumId: item._id })}
+                />
               )}
             />
           ) : (
@@ -219,7 +220,7 @@ export default function HomeScreen() {
               keyExtractor={(item) => item._id}
               contentContainerStyle={{ paddingHorizontal: 20 }}
               renderItem={({ item }) => (
-                <ArtistCard artist={item} onPress={() => navigation.navigate("Artist", { artistId: item._id })} />
+                <ArtistCard artist={item} onPress={() => navigation.navigate("Artist", { artist: item })} />
               )}
             />
           ) : (

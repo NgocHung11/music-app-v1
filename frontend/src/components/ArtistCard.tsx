@@ -7,13 +7,15 @@ import { Ionicons } from "@expo/vector-icons"
 import { COLORS, SHADOWS, GRADIENTS } from "../constants/theme"
 import type { Artist } from "../types"
 import { getArtistAvatar, getArtistFollowers } from "../types"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { favoriteApi } from "../api"
 
 type Props = {
   artist: Artist
   onPress: () => void
   size?: "small" | "medium" | "large"
   style?: any
+  showFollowStatus?: boolean
 }
 
 const SIZES = {
@@ -22,14 +24,30 @@ const SIZES = {
   large: 120,
 }
 
-const ArtistCard: React.FC<Props> = ({ artist, onPress, size = "medium", style }) => {
+const ArtistCard: React.FC<Props> = ({ artist, onPress, size = "medium", style, showFollowStatus = true }) => {
   const dimension = SIZES[size]
   const [imageError, setImageError] = useState(false)
+  const [isFollowed, setIsFollowed] = useState(false)
+
   const avatarUrl = getArtistAvatar(artist)
   const isPlaceholder = avatarUrl.includes("placeholder")
   const hasValidImage = !imageError && !isPlaceholder
 
   const followers = getArtistFollowers(artist)
+
+  useEffect(() => {
+    if (showFollowStatus && artist._id) {
+      const checkFollowStatus = async () => {
+        try {
+          const res = await favoriteApi.check("artist", artist._id)
+          setIsFollowed(res.data.isFavorite)
+        } catch (error) {
+          // Silently fail - user might not be logged in
+        }
+      }
+      checkFollowStatus()
+    }
+  }, [artist._id, showFollowStatus])
 
   return (
     <TouchableOpacity style={[styles.container, style]} onPress={onPress} activeOpacity={0.8}>
@@ -48,8 +66,8 @@ const ArtistCard: React.FC<Props> = ({ artist, onPress, size = "medium", style }
             <Ionicons name="person" size={dimension * 0.4} color="#fff" />
           </LinearGradient>
         )}
-        {artist.isVerified && (
-          <View style={styles.verifiedBadge}>
+        {showFollowStatus && isFollowed && (
+          <View style={styles.followedBadge}>
             <Ionicons name="checkmark-circle" size={20} color={COLORS.primary} />
           </View>
         )}
@@ -80,7 +98,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  verifiedBadge: {
+  followedBadge: {
     position: "absolute",
     bottom: 0,
     right: 0,
