@@ -23,7 +23,7 @@ export const toPlayerSong = (song: Song): PlayerSong => ({
   _id: song._id,
   title: song.title,
   artist: getArtistName(song.artist),
-  artistId: typeof song.artist === "string" ? song.artist : song.artist._id,
+  artistId: typeof song.artist === "string" ? song.artist : (song.artist as any)?._id,
   coverUrl: getCoverImage(song),
   audioUrl: song.audioUrl,
   duration: song.duration,
@@ -32,18 +32,18 @@ export const toPlayerSong = (song: Song): PlayerSong => ({
 interface PlayerContextType {
   currentSong: PlayerSong | null
   isPlaying: boolean
-  isLoading: boolean // Thêm loading state
+  isLoading: boolean
   positionMillis: number
   durationMillis: number | null
   songList: PlayerSong[]
   currentIndex: number
-  // Shuffle & Repeat
   shuffle: boolean
   repeatMode: "off" | "all" | "one"
   // Actions
   setQueue: (songs: PlayerSong[], startIndex?: number) => Promise<void>
+  updateQueuePreserveCurrent: (songs: PlayerSong[]) => Promise<void>
   playSongs: (songs: Song[], startIndex?: number) => Promise<void>
-  playSong: (song: Song) => Promise<void> // Expose playSong for single song
+  playSong: (song: Song) => Promise<void>
   togglePlay: () => Promise<void>
   nextSong: () => Promise<void>
   prevSong: () => Promise<void>
@@ -61,7 +61,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [currentIndex, setCurrentIndex] = useState(0)
   const [currentSong, setCurrentSong] = useState<PlayerSong | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
-  const [isLoading, setIsLoading] = useState(false) // Loading state
+  const [isLoading, setIsLoading] = useState(false)
   const [positionMillis, setPositionMillis] = useState(0)
   const [durationMillis, setDurationMillis] = useState<number | null>(null)
   const [shuffle, setShuffle] = useState(false)
@@ -103,7 +103,6 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         { shouldPlay: false, progressUpdateIntervalMillis: 500 },
       )
 
-      // Clean old cache if too many
       if (preloadCacheRef.current.size >= MAX_PRELOAD_CACHE) {
         const firstKey = preloadCacheRef.current.keys().next().value
         if (firstKey) {
@@ -115,7 +114,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       preloadCacheRef.current.set(song._id, sound)
     } catch (e) {
-      // Ignore preload errors
+      // ignore
     } finally {
       preloadingRef.current.delete(song._id)
     }
@@ -126,7 +125,6 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     const songsToPreload: PlayerSong[] = []
 
-    // Preload next 2 songs
     for (let i = 1; i <= 2; i++) {
       const nextIdx = (currentIndex + i) % songList.length
       if (nextIdx !== currentIndex && songList[nextIdx]) {
@@ -134,13 +132,12 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     }
 
-    // Preload previous song
     const prevIdx = (currentIndex - 1 + songList.length) % songList.length
     if (prevIdx !== currentIndex && songList[prevIdx]) {
       songsToPreload.push(songList[prevIdx])
     }
 
-    songsToPreload.forEach((song) => preloadSong(song))
+    songsToPreload.forEach((s) => preloadSong(s))
   }, [currentIndex, songList, preloadSong])
 
   const recordPlayHistory = useCallback(async (song: PlayerSong, duration: number) => {
@@ -182,10 +179,12 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const playPlayerSong = async (song: PlayerSong, forceRestart = false) => {
     pendingSongIdRef.current = song._id
 
+    // If same song already loaded & playing, just resume
     if (currentSong?._id === song._id && soundRef.current && !forceRestart) {
       try {
         const status = await soundRef.current.getStatusAsync()
         if (status.isLoaded) {
+          // resume from beginning of track for consistent behavior
           soundRef.current.setPositionAsync(0)
           soundRef.current.playAsync()
           setPositionMillis(0)
@@ -194,7 +193,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           return
         }
       } catch (e) {
-        // Fall through to reload
+        // fall through
       }
     }
 
@@ -202,7 +201,6 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setIsPlaying(true)
     setPositionMillis(0)
 
-    // Cleanup old sound
     const oldSound = soundRef.current
     soundRef.current = null
     if (oldSound) {
@@ -223,14 +221,13 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         soundRef.current = preloadedSound
         preloadedSound.setOnPlaybackStatusUpdate(onPlaybackStatusUpdate)
 
-        // Instant play from preloaded sound
         preloadedSound.setPositionAsync(0)
         preloadedSound.playAsync()
         playStartTimeRef.current = Date.now()
         setIsLoading(false)
         return
       } catch (e) {
-        // Fall through to load normally
+        // fall through
       }
     }
 
@@ -260,11 +257,60 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }
 
+  // Set queue and start playing at startIndex (current behavior)
   const setQueue = async (songs: PlayerSong[], startIndex = 0) => {
     if (!songs || songs.length === 0) return
     setSongList(songs)
     setCurrentIndex(startIndex)
     await playPlayerSong(songs[startIndex])
+  }
+
+  /**
+   * Update queue but preserve current playing song without restarting it,
+   * if the currentSong exists in the new list. If currentSong is not in the new list,
+   * start playing from index 0.
+   */
+  const updateQueuePreserveCurrent = async (songs: PlayerSong[]) => {
+    if (!songs || songs.length === 0) {
+      setSongList([])
+      setCurrentIndex(0)
+      return
+    }
+
+    // If no currentSong → behave like normal setQueue
+    if (!currentSong) {
+      setSongList(songs)
+      setCurrentIndex(0)
+      await playPlayerSong(songs[0])
+      return
+    }
+
+    // Find if currentSong exists in new songs
+    const idx = songs.findIndex((s) => s._id === currentSong._id)
+    if (idx === -1) {
+      // current song not present → start from first
+      setSongList(songs)
+      setCurrentIndex(0)
+      await playPlayerSong(songs[0])
+      return
+    }
+
+    // currentSong exists in list → update songList but don't reload audio
+    setSongList(songs)
+    setCurrentIndex(idx)
+
+    // do NOT call playPlayerSong to avoid restart. However ensure soundRef is connected
+    // to onPlaybackStatusUpdate (it already is). Keep playing state.
+    // If for some reason there's no soundRef or not loaded, then attempt to load currentSong
+    try {
+      const status = await soundRef.current?.getStatusAsync()
+      if (!status || !("isLoaded" in status) || !status.isLoaded) {
+        // Load currentSong into player silently without resetting playback if possible
+        await playPlayerSong(songs[idx])
+      }
+    } catch (e) {
+      // ignore
+    }
   }
 
   const playSongs = async (songs: Song[], startIndex = 0) => {
@@ -341,7 +387,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (songList.length === 0) return
 
     if (positionMillis > 3000 && soundRef.current) {
-      soundRef.current.setPositionAsync(0) // No await for instant response
+      soundRef.current.setPositionAsync(0)
       setPositionMillis(0)
       return
     }
@@ -394,6 +440,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         shuffle,
         repeatMode,
         setQueue,
+        updateQueuePreserveCurrent,
         playSongs,
         playSong,
         togglePlay,
