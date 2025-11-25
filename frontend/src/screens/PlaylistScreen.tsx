@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useCallback } from "react"
 import {
   View,
@@ -17,7 +15,7 @@ import { Ionicons } from "@expo/vector-icons"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { useNavigation, useRoute, useFocusEffect } from "@react-navigation/native"
 import { playlistApi } from "../api"
-import { usePlayer } from "../context/PlayerContext"
+import { usePlayer, toPlayerSong } from "../context/PlayerContext"
 import type { Playlist, Song } from "../types"
 import { getCoverImage } from "../types"
 import { COLORS, GRADIENTS, BORDER_RADIUS, SHADOWS } from "../constants/theme"
@@ -32,15 +30,49 @@ export default function PlaylistScreen() {
   const { playlistId } = route.params || {}
 
   const [playlist, setPlaylist] = useState<Playlist | null>(null)
+  const [songs, setSongs] = useState<Song[]>([])
   const [loading, setLoading] = useState(true)
 
-  const { playSongs } = usePlayer()
+  const {
+    playSongs,
+    isPlaying,
+    songList,
+    currentSong,
+    togglePlay,
+    shuffle,
+    toggleShuffle,
+    updateQueuePreserveCurrent,
+  } = usePlayer()
+
+  const isCurrentPlaylistPlaying = useCallback(() => {
+    if (!currentSong || songs.length === 0) return false
+    return songs.some((song) => song._id === currentSong._id)
+  }, [currentSong, songs])
 
   const fetchPlaylist = useCallback(async () => {
     if (!playlistId) return
     try {
       const res = await playlistApi.getById(playlistId)
-      setPlaylist(res.data.playlist)
+      const playlistData = res.data.playlist
+      setPlaylist(playlistData)
+
+      if (playlistData?.songs && Array.isArray(playlistData.songs)) {
+        const processedSongs = playlistData.songs
+          .map((item: any) => {
+            if (item && item.song && typeof item.song === "object") {
+              return item.song as Song
+            }
+            if (item && item._id && item.title) {
+              return item as Song
+            }
+            return null
+          })
+          .filter((song: Song | null): song is Song => song !== null)
+
+        setSongs(processedSongs)
+      } else {
+        setSongs([])
+      }
     } catch (error) {
       console.warn("fetchPlaylist error", error)
     } finally {
@@ -55,8 +87,69 @@ export default function PlaylistScreen() {
   )
 
   const handlePlayAll = () => {
-    if (playlist?.songs && (playlist.songs as Song[]).length > 0) {
-      playSongs(playlist.songs as Song[], 0)
+    if (songs.length > 0) {
+      if (isCurrentPlaylistPlaying() && isPlaying) {
+        togglePlay()
+      } else if (isCurrentPlaylistPlaying() && !isPlaying) {
+        togglePlay()
+      } else {
+        playSongs(songs, 0)
+      }
+    }
+  }
+
+  const handleShufflePlay = () => {
+    if (songs.length === 0) return
+
+    // copy original song objects (Song[])
+    let newOrder = [...songs]
+
+    // CASE A: chưa có bài nào đang phát thuộc playlist
+    if (!isCurrentPlaylistPlaying()) {
+      if (!shuffle) toggleShuffle()
+
+      // shuffle entire array
+      newOrder = newOrder.sort(() => Math.random() - 0.5)
+
+      // update UI
+      setSongs(newOrder)
+
+      // play first in shuffled list
+      playSongs(newOrder, 0)
+      return
+    }
+
+    // CASE B: đang phát 1 bài trong playlist
+    if (currentSong) {
+      // playing is PlayerSong
+      const playing = currentSong
+
+      // others are Song[] (original objects)
+      const others = newOrder.filter((s) => s._id !== playing._id)
+
+      // shuffle others
+      others.sort(() => Math.random() - 0.5)
+
+      // Build PlayerSong[] for player: [playing, ...othersConverted]
+      const othersPlayer = others.map((s) => toPlayerSong(s))
+      const newOrderPlayers = [playing, ...othersPlayer]
+
+      // Update player queue but preserve current playing track (no restart)
+      updateQueuePreserveCurrent(newOrderPlayers)
+
+      // Update UI songs (Song[]) — need to include the playing track as Song
+      // Build a Song-like object for playing track by mapping minimal fields and casting
+      const playingAsSong = {
+        _id: playing._id,
+        title: playing.title,
+        artist: playing.artistId ? (playing.artistId as any) : playing.artist,
+        duration: playing.duration ?? 0,
+        audioUrl: playing.audioUrl,
+        // include minimal required fields to satisfy Song type — cast to any
+      } as any as Song
+
+      const newOrderSongs = [playingAsSong, ...others]
+      setSongs(newOrderSongs)
     }
   }
 
@@ -69,13 +162,7 @@ export default function PlaylistScreen() {
         onPress: async () => {
           try {
             await playlistApi.removeSong(playlistId, songId)
-            setPlaylist((prev) => {
-              if (!prev) return prev
-              return {
-                ...prev,
-                songs: (prev.songs as Song[]).filter((s) => s._id !== songId),
-              }
-            })
+            setSongs((prev) => prev.filter((s) => s._id !== songId))
           } catch (error) {
             console.warn("Remove song error", error)
           }
@@ -90,8 +177,6 @@ export default function PlaylistScreen() {
     if (hours > 0) return `${hours}h ${minutes}m`
     return `${minutes} min`
   }
-
-  const songs = (playlist?.songs || []) as Song[]
 
   if (loading) {
     return (
@@ -108,6 +193,9 @@ export default function PlaylistScreen() {
       </View>
     )
   }
+
+  const isThisPlaylistPlaying = isCurrentPlaylistPlaying()
+  const showPauseIcon = isThisPlaylistPlaying && isPlaying
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -148,13 +236,13 @@ export default function PlaylistScreen() {
 
         {/* Actions */}
         <View style={styles.actions}>
-          <TouchableOpacity style={styles.shuffleBtn}>
-            <Ionicons name="shuffle" size={22} color="#fff" />
+          <TouchableOpacity style={[styles.shuffleBtn, shuffle && styles.shuffleBtnActive]} onPress={handleShufflePlay}>
+            <Ionicons name="shuffle" size={22} color={shuffle ? COLORS.primary : "#fff"} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.playAllBtn} onPress={handlePlayAll}>
             <LinearGradient colors={GRADIENTS.primary} style={styles.playAllGradient}>
-              <Ionicons name="play" size={28} color="#fff" />
+              <Ionicons name={showPauseIcon ? "pause" : "play"} size={28} color="#fff" />
             </LinearGradient>
           </TouchableOpacity>
 
@@ -296,6 +384,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderColor: COLORS.border,
+  },
+  shuffleBtnActive: {
+    borderColor: COLORS.primary,
+    backgroundColor: `${COLORS.primary}20`,
   },
   playAllBtn: {
     ...SHADOWS.primary,
