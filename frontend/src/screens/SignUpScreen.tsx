@@ -30,32 +30,59 @@ export default function SignUpScreen({ navigation }: any) {
   const [showPassword, setShowPassword] = useState(false)
 
   const onSignUp = async () => {
-    if (!username || !password || !email) {
-      Alert.alert("Missing Information", "Please fill in all required fields.")
+    if (!username.trim()) {
+      Alert.alert("Lỗi", "Vui lòng nhập username")
+      return
+    }
+    if (!email.trim()) {
+      Alert.alert("Lỗi", "Vui lòng nhập email")
+      return
+    }
+    if (!password) {
+      Alert.alert("Lỗi", "Vui lòng nhập mật khẩu")
       return
     }
     if (password !== confirmPassword) {
-      Alert.alert("Password Mismatch", "Passwords do not match.")
+      Alert.alert("Lỗi", "Mật khẩu xác nhận không khớp")
       return
     }
     if (password.length < 6) {
-      Alert.alert("Weak Password", "Password must be at least 6 characters.")
+      Alert.alert("Lỗi", "Mật khẩu phải có ít nhất 6 ký tự")
+      return
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email.trim())) {
+      Alert.alert("Lỗi", "Email không hợp lệ")
       return
     }
 
     setLoading(true)
     try {
-      await signUp({
+      console.log("[v0] Attempting signup with:", {
         username: username.trim().toLowerCase(),
-        password,
         email: email.trim().toLowerCase(),
         firstName: firstName.trim(),
         lastName: lastName.trim(),
       })
-      Alert.alert("Success", "Account created successfully. Please sign in.")
-      navigation.navigate("SignIn")
+
+      await signUp({
+        username: username.trim().toLowerCase(),
+        password,
+        email: email.trim().toLowerCase(),
+        firstName: firstName.trim() || undefined,
+        lastName: lastName.trim() || undefined,
+      })
+
+      console.log("[v0] Signup successful")
+      Alert.alert("Thành công", "Tài khoản đã được tạo. Vui lòng đăng nhập.", [
+        { text: "OK", onPress: () => navigation.navigate("SignIn") },
+      ])
     } catch (e: any) {
-      Alert.alert("Sign Up Failed", e.message || "An error occurred.")
+      console.log("[v0] Signup error:", e.response?.data || e.message)
+      const errorMessage = e.response?.data?.message || e.message || "Đã có lỗi xảy ra"
+      Alert.alert("Đăng ký thất bại", errorMessage)
     } finally {
       setLoading(false)
     }
@@ -69,8 +96,8 @@ export default function SignUpScreen({ navigation }: any) {
             <View style={styles.iconWrapper}>
               <Ionicons name="musical-notes" size={48} color={COLORS.primary} />
             </View>
-            <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Join and start listening</Text>
+            <Text style={styles.title}>Tạo tài khoản</Text>
+            <Text style={styles.subtitle}>Tham gia và bắt đầu nghe nhạc</Text>
           </View>
 
           <View style={styles.formContainer}>
@@ -102,7 +129,7 @@ export default function SignUpScreen({ navigation }: any) {
             <View style={styles.row}>
               <View style={[styles.inputContainer, { flex: 1 }]}>
                 <TextInput
-                  placeholder="First Name"
+                  placeholder="Họ"
                   placeholderTextColor={COLORS.textMuted}
                   style={styles.input}
                   value={firstName}
@@ -111,7 +138,7 @@ export default function SignUpScreen({ navigation }: any) {
               </View>
               <View style={[styles.inputContainer, { flex: 1 }]}>
                 <TextInput
-                  placeholder="Last Name"
+                  placeholder="Tên"
                   placeholderTextColor={COLORS.textMuted}
                   style={styles.input}
                   value={lastName}
@@ -123,7 +150,7 @@ export default function SignUpScreen({ navigation }: any) {
             <View style={styles.inputContainer}>
               <Ionicons name="lock-closed-outline" size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
               <TextInput
-                placeholder="Password *"
+                placeholder="Mật khẩu *"
                 placeholderTextColor={COLORS.textMuted}
                 style={styles.input}
                 secureTextEntry={!showPassword}
@@ -138,7 +165,7 @@ export default function SignUpScreen({ navigation }: any) {
             <View style={styles.inputContainer}>
               <Ionicons name="lock-closed-outline" size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
               <TextInput
-                placeholder="Confirm Password *"
+                placeholder="Xác nhận mật khẩu *"
                 placeholderTextColor={COLORS.textMuted}
                 style={styles.input}
                 secureTextEntry={!showPassword}
@@ -163,7 +190,7 @@ export default function SignUpScreen({ navigation }: any) {
                   <ActivityIndicator color="#fff" />
                 ) : (
                   <>
-                    <Text style={styles.buttonText}>Create Account</Text>
+                    <Text style={styles.buttonText}>Tạo tài khoản</Text>
                     <Ionicons name="arrow-forward" size={20} color="#fff" />
                   </>
                 )}
@@ -172,7 +199,7 @@ export default function SignUpScreen({ navigation }: any) {
 
             <TouchableOpacity onPress={() => navigation.navigate("SignIn")} style={styles.linkContainer}>
               <Text style={styles.linkText}>
-                Already have an account? <Text style={styles.linkHighlight}>Sign In</Text>
+                Đã có tài khoản? <Text style={styles.linkHighlight}>Đăng nhập</Text>
               </Text>
             </TouchableOpacity>
           </View>
