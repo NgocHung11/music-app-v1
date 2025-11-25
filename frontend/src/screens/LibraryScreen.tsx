@@ -126,6 +126,67 @@ export default function LibraryScreen() {
     ])
   }
 
+  const handleRemoveFavoriteSong = (song: Song) => {
+    Alert.alert("Remove from Liked Songs", `Are you sure you want to remove "${song.title}" from your liked songs?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Remove",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await favoriteApi.remove("song", song._id)
+            setLikedSongs((prev) => prev.filter((s) => s._id !== song._id))
+          } catch (error) {
+            console.warn("Remove favorite song error", error)
+            Alert.alert("Error", "Failed to remove song from favorites")
+          }
+        },
+      },
+    ])
+  }
+
+  const handleRemoveFavoriteAlbum = (album: Album) => {
+    Alert.alert(
+      "Remove from Liked Albums",
+      `Are you sure you want to remove "${album.title}" from your liked albums?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await favoriteApi.remove("album", album._id)
+              setLikedAlbums((prev) => prev.filter((a) => a._id !== album._id))
+            } catch (error) {
+              console.warn("Remove favorite album error", error)
+              Alert.alert("Error", "Failed to remove album from favorites")
+            }
+          },
+        },
+      ],
+    )
+  }
+
+  const handleRemoveFavoriteArtist = (artist: Artist) => {
+    Alert.alert("Unfollow Artist", `Are you sure you want to unfollow "${artist.name}"?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Unfollow",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await favoriteApi.remove("artist", artist._id)
+            setLikedArtists((prev) => prev.filter((a) => a._id !== artist._id))
+          } catch (error) {
+            console.warn("Remove favorite artist error", error)
+            Alert.alert("Error", "Failed to unfollow artist")
+          }
+        },
+      },
+    ])
+  }
+
   const tabs: { key: TabType; label: string; icon: string }[] = [
     { key: "playlists", label: "Playlists", icon: "list" },
     { key: "songs", label: "Songs", icon: "musical-note" },
@@ -165,7 +226,11 @@ export default function LibraryScreen() {
   }
 
   const renderSongItem = ({ item, index }: { item: Song; index: number }) => (
-    <TouchableOpacity style={styles.songItem} onPress={() => playSongs(likedSongs, index)}>
+    <TouchableOpacity
+      style={styles.songItem}
+      onPress={() => playSongs(likedSongs, index)}
+      onLongPress={() => handleRemoveFavoriteSong(item)}
+    >
       <Image source={{ uri: getCoverImage(item) }} style={styles.songCover} />
       <View style={styles.songInfo}>
         <Text style={styles.songTitle} numberOfLines={1}>
@@ -175,12 +240,21 @@ export default function LibraryScreen() {
           {typeof item.artist === "string" ? item.artist : item.artist.name}
         </Text>
       </View>
-      <Ionicons name="heart" size={20} color={COLORS.error} />
+      <TouchableOpacity
+        onPress={() => handleRemoveFavoriteSong(item)}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      >
+        <Ionicons name="heart" size={20} color={COLORS.error} />
+      </TouchableOpacity>
     </TouchableOpacity>
   )
 
   const renderAlbumItem = ({ item }: { item: Album }) => (
-    <TouchableOpacity style={styles.albumItem} onPress={() => navigation.navigate("Album", { album: item })}>
+    <TouchableOpacity
+      style={styles.albumItem}
+      onPress={() => navigation.navigate("Album", { album: item })}
+      onLongPress={() => handleRemoveFavoriteAlbum(item)}
+    >
       <Image source={{ uri: getCoverImage(item) }} style={styles.albumCover} />
       <Text style={styles.albumTitle} numberOfLines={1}>
         {item.title}
@@ -192,7 +266,11 @@ export default function LibraryScreen() {
   )
 
   const renderArtistItem = ({ item }: { item: Artist }) => (
-    <TouchableOpacity style={styles.artistItem} onPress={() => navigation.navigate("Artist", { artist: item })}>
+    <TouchableOpacity
+      style={styles.artistItem}
+      onPress={() => navigation.navigate("Artist", { artist: item })}
+      onLongPress={() => handleRemoveFavoriteArtist(item)}
+    >
       {item.avatar ? (
         <Image source={{ uri: item.avatar }} style={styles.artistAvatar} />
       ) : (
