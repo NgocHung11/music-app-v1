@@ -8,6 +8,7 @@ import { ActivityIndicator, View } from "react-native"
 import { AuthProvider, useAuth } from "./src/context/AuthContext"
 import { PlayerProvider } from "./src/context/PlayerContext"
 import { COLORS } from "./src/constants/theme"
+import MiniPlayer from "./src/components/MiniPlayer"
 
 // Auth Screens
 import SignInScreen from "./src/screens/SignInScreen"
@@ -16,17 +17,6 @@ import SignUpScreen from "./src/screens/SignUpScreen"
 // Main Tabs
 import MainTabs from "./src/navigation/MainTabs"
 
-// Detail Screens
-import SearchScreen from "./src/screens/SearchScreen"
-import SongsScreen from "./src/screens/SongsScreen"
-import AlbumScreen from "./src/screens/AlbumScreen"
-import ArtistScreen from "./src/screens/ArtistScreen"
-import GenreScreen from "./src/screens/GenreScreen"
-import PlaylistScreen from "./src/screens/PlaylistScreen"
-import HistoryScreen from "./src/screens/HistoryScreen"
-import LikedSongsScreen from "./src/screens/LikedSongsScreen"
-import EditProfileScreen from "./src/screens/EditProfileScreen"
-
 // Types for navigation
 export type RootStackParamList = {
   // Auth
@@ -34,15 +24,6 @@ export type RootStackParamList = {
   SignUp: undefined
   // Main
   MainTabs: undefined
-  Search: undefined
-  Songs: undefined
-  Album: { albumId: string }
-  Artist: { artistId: string }
-  Genre: { genreId: string }
-  Playlist: { playlistId: string }
-  History: undefined
-  LikedSongs: undefined
-  EditProfile: undefined
 }
 
 const Stack = createNativeStackNavigator<RootStackParamList>()
@@ -61,18 +42,7 @@ const RootNavigator = () => {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {isAuthenticated ? (
-        <>
-          <Stack.Screen name="MainTabs" component={MainTabs} />
-          <Stack.Screen name="Search" component={SearchScreen} />
-          <Stack.Screen name="Songs" component={SongsScreen} />
-          <Stack.Screen name="Album" component={AlbumScreen} />
-          <Stack.Screen name="Artist" component={ArtistScreen} />
-          <Stack.Screen name="Genre" component={GenreScreen} />
-          <Stack.Screen name="Playlist" component={PlaylistScreen} />
-          <Stack.Screen name="History" component={HistoryScreen} />
-          <Stack.Screen name="LikedSongs" component={LikedSongsScreen} />
-          <Stack.Screen name="EditProfile" component={EditProfileScreen} />
-        </>
+        <Stack.Screen name="MainTabs" component={MainTabs} />
       ) : (
         <>
           <Stack.Screen name="SignIn" component={SignInScreen} />
@@ -91,7 +61,10 @@ export default function App() {
           <PlayerProvider>
             <StatusBar style="light" />
             <NavigationContainer>
-              <RootNavigator />
+              <View style={{ flex: 1 }}>
+                <RootNavigator />
+                <MiniPlayer />
+              </View>
             </NavigationContainer>
           </PlayerProvider>
         </AuthProvider>

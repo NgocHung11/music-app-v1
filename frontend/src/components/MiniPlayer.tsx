@@ -2,33 +2,24 @@
 
 import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native"
 import { usePlayer } from "../context/PlayerContext"
-import { useNavigation, useNavigationState } from "@react-navigation/native"
+import { useNavigation } from "@react-navigation/native"
 import { Ionicons } from "@expo/vector-icons"
 import { LinearGradient } from "expo-linear-gradient"
 import { useState, useEffect } from "react"
 
 const PLACEHOLDER_IMAGE = "https://via.placeholder.com/300x300.png?text=No+Cover"
 
-const getCurrentTabName = (state: any): string | null => {
-  if (!state) return null
-  const route = state.routes?.[state.index]
-  return route?.name || null
-}
-
 export default function MiniPlayer() {
   const { currentSong, isPlaying, togglePlay, nextSong, prevSong } = usePlayer()
   const navigation = useNavigation<any>()
   const [imageError, setImageError] = useState(false)
 
-  const navState = useNavigationState((state) => state)
-
-  const currentTabName = getCurrentTabName(navState)
-
   useEffect(() => {
     setImageError(false)
   }, [currentSong?._id])
 
-  if (!currentSong || currentTabName === "Player") {
+  // MiniPlayer will now always render when there's a currentSong
+  if (!currentSong) {
     return null
   }
 

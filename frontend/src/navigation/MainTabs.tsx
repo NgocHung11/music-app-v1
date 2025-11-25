@@ -16,6 +16,7 @@ import ArtistsScreen from "../screens/ArtistsScreen"
 import TopSongsScreen from "../screens/TopSongsScreen"
 import ArtistSongsScreen from "../screens/ArtistSongsScreen"
 import ArtistAlbumsScreen from "../screens/ArtistAlbumsScreen"
+import AddSongsScreen from "../screens/AddSongsScreen"
 
 // Library Stack Screens
 import LibraryScreen from "../screens/LibraryScreen"
@@ -48,6 +49,7 @@ function HomeStackScreen() {
       <HomeStack.Screen name="TopSongs" component={TopSongsScreen} />
       <HomeStack.Screen name="ArtistSongs" component={ArtistSongsScreen} />
       <HomeStack.Screen name="ArtistAlbums" component={ArtistAlbumsScreen} />
+      <HomeStack.Screen name="AddSongs" component={AddSongsScreen} />
     </HomeStack.Navigator>
   )
 }
@@ -61,6 +63,7 @@ function LibraryStackScreen() {
       <LibraryStack.Screen name="Playlist" component={PlaylistScreen} />
       <LibraryStack.Screen name="Album" component={AlbumScreen} />
       <LibraryStack.Screen name="Artist" component={ArtistScreen} />
+      <LibraryStack.Screen name="AddSongs" component={AddSongsScreen} />
     </LibraryStack.Navigator>
   )
 }
@@ -119,6 +122,10 @@ export default function MainTabs() {
 
 const styles = StyleSheet.create({
   tabBar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: COLORS.surface,
     borderTopColor: COLORS.borderLight,
     borderTopWidth: 1,

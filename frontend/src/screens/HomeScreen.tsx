@@ -136,7 +136,7 @@ export default function HomeScreen() {
           <SectionHeader
             title="Top Songs"
             subtitle={`Top of the ${topPeriod}`}
-            onSeeAll={() => navigation.navigate("Songs")}
+            onSeeAll={() => navigation.navigate("TopSongs", { period: topPeriod })}
           />
 
           {/* Period Filter */}

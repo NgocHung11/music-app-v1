@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState, useCallback } from "react"
 import {
   View,
   Text,
@@ -15,7 +15,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient"
 import { Ionicons } from "@expo/vector-icons"
 import { SafeAreaView } from "react-native-safe-area-context"
-import { useNavigation, useRoute } from "@react-navigation/native"
+import { useNavigation, useRoute, useFocusEffect } from "@react-navigation/native"
 import { playlistApi } from "../api"
 import { usePlayer } from "../context/PlayerContext"
 import type { Playlist, Song } from "../types"
@@ -36,20 +36,23 @@ export default function PlaylistScreen() {
 
   const { playSongs } = usePlayer()
 
-  useEffect(() => {
-    const fetchPlaylist = async () => {
-      if (!playlistId) return
-      try {
-        const res = await playlistApi.getById(playlistId)
-        setPlaylist(res.data.playlist)
-      } catch (error) {
-        console.warn("fetchPlaylist error", error)
-      } finally {
-        setLoading(false)
-      }
+  const fetchPlaylist = useCallback(async () => {
+    if (!playlistId) return
+    try {
+      const res = await playlistApi.getById(playlistId)
+      setPlaylist(res.data.playlist)
+    } catch (error) {
+      console.warn("fetchPlaylist error", error)
+    } finally {
+      setLoading(false)
     }
-    fetchPlaylist()
   }, [playlistId])
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchPlaylist()
+    }, [fetchPlaylist]),
+  )
 
   const handlePlayAll = () => {
     if (playlist?.songs && (playlist.songs as Song[]).length > 0) {
