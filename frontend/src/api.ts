@@ -13,7 +13,8 @@ import type { Song, Album, Artist, Genre, Playlist, User, TopSongsResponse, Play
  * Thay đổi IP này thành IP máy tính của bạn
  * Ví dụ: nếu IP là 192.168.1.10 thì đổi thành "http://192.168.1.10:5001"
  */
-export const API_BASE = process.env.API_BASE || "http://192.168.1.5:5001" // Android Emulator
+export const API_BASE = "https://music-app-v1-3y0r.onrender.com"
+// Android Emulator
 // export const API_BASE = "http://localhost:5001" // iOS Simulator
 // export const API_BASE = "http://YOUR_IP:5001" // Thiết bị thật - thay YOUR_IP bằng IP máy tính
 

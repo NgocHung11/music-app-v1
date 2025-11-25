@@ -171,7 +171,7 @@ export default function HomeScreen() {
         </View>
 
         {/* Genres Section */}
-        <View>
+        {/* <View>
           <SectionHeader title="Browse by Genre" />
           {genres.length > 0 ? (
             <FlatList
@@ -187,7 +187,7 @@ export default function HomeScreen() {
           ) : (
             <Text style={styles.emptyText}>No genres available</Text>
           )}
-        </View>
+        </View> */}
 
         {/* New Albums Section */}
         <View>
