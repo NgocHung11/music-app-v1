@@ -1,51 +1,84 @@
-import React from "react";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import SongsScreen from "../screens/SongsScreen";
-import PlayerScreen from "../screens/PlayerScreen";
-import ProfileScreen from "../screens/ProfileScreen";
-import MiniPlayer from "../components/MiniPlayer";
-import { View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { View, StyleSheet } from "react-native"
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs"
+import { Ionicons } from "@expo/vector-icons"
+import HomeScreen from "../screens/HomeScreen"
+import LibraryScreen from "../screens/LibraryScreen"
+import PlayerScreen from "../screens/PlayerScreen"
+import ProfileScreen from "../screens/ProfileScreen"
+import MiniPlayer from "../components/MiniPlayer"
+import { COLORS } from "../constants/theme"
 
-export type RootStackParamList = {
-  Songs: undefined;
-  Profile: undefined;
-  Explore: undefined;
-};
+export type RootTabParamList = {
+  Home: undefined
+  Library: undefined
+  Player: undefined
+  Profile: undefined
+}
 
-const Tab = createBottomTabNavigator<RootStackParamList>();
+const Tab = createBottomTabNavigator<RootTabParamList>()
 
 export default function MainTabs() {
   return (
     <View style={{ flex: 1 }}>
       <Tab.Navigator
-        initialRouteName="Songs" // ✅ mặc định vào tab Songs
+        initialRouteName="Home"
         screenOptions={({ route }) => ({
           headerShown: false,
           tabBarShowLabel: true,
-          tabBarActiveTintColor: "#3c60d6", // thêm màu nhấn
-          tabBarInactiveTintColor: "#aaa",
-          tabBarStyle: {
-            backgroundColor: "#000",
-            borderTopColor: "#111",
-            height: 60,
-            paddingBottom: 5,
-          },
-          tabBarIcon: ({ color, size }) => {
-            let icon = "musical-notes";
-            if (route.name === "Explore") icon = "compass";
-            if (route.name === "Profile") icon = "person";
-            return <Ionicons name={icon as any} color={color} size={size} />;
+          tabBarActiveTintColor: COLORS.primary,
+          tabBarInactiveTintColor: COLORS.textMuted,
+          tabBarStyle: styles.tabBar,
+          tabBarLabelStyle: styles.tabBarLabel,
+          tabBarIcon: ({ color, size, focused }) => {
+            let iconName: string
+            switch (route.name) {
+              case "Home":
+                iconName = focused ? "home" : "home-outline"
+                break
+              case "Library":
+                iconName = focused ? "library" : "library-outline"
+                break
+              case "Player":
+                iconName = focused ? "play-circle" : "play-circle-outline"
+                break
+              case "Profile":
+                iconName = focused ? "person" : "person-outline"
+                break
+              default:
+                iconName = "ellipse"
+            }
+            return <Ionicons name={iconName as any} color={color} size={focused ? size + 2 : size} />
           },
         })}
       >
-        <Tab.Screen name="Explore" component={PlayerScreen} />
-        <Tab.Screen name="Songs" component={SongsScreen} />
+        <Tab.Screen name="Home" component={HomeScreen} />
+        <Tab.Screen name="Library" component={LibraryScreen} />
+        <Tab.Screen name="Player" component={PlayerScreen} />
         <Tab.Screen name="Profile" component={ProfileScreen} />
       </Tab.Navigator>
 
-      {/* MiniPlayer hiển thị cố định trên tab bar */}
       <MiniPlayer />
     </View>
-  );
+  )
 }
+
+const styles = StyleSheet.create({
+  tabBar: {
+    backgroundColor: COLORS.surface,
+    borderTopColor: COLORS.borderLight,
+    borderTopWidth: 1,
+    height: 65,
+    paddingBottom: 8,
+    paddingTop: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 16,
+  },
+  tabBarLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    letterSpacing: 0.3,
+  },
+})
