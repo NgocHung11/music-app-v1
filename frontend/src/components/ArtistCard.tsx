@@ -1,0 +1,93 @@
+import type React from "react"
+import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native"
+import { LinearGradient } from "expo-linear-gradient"
+import { Ionicons } from "@expo/vector-icons"
+import { COLORS, SHADOWS, GRADIENTS } from "../constants/theme"
+import type { Artist } from "../types"
+
+type Props = {
+  artist: Artist
+  onPress: () => void
+  size?: "small" | "medium" | "large"
+}
+
+const SIZES = {
+  small: 80,
+  medium: 100,
+  large: 120,
+}
+
+const ArtistCard: React.FC<Props> = ({ artist, onPress, size = "medium" }) => {
+  const dimension = SIZES[size]
+
+  return (
+    <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.8}>
+      <View style={[styles.imageWrapper, { width: dimension, height: dimension, borderRadius: dimension / 2 }]}>
+        {artist.avatar ? (
+          <Image
+            source={{ uri: artist.avatar }}
+            style={[styles.image, { width: dimension, height: dimension, borderRadius: dimension / 2 }]}
+          />
+        ) : (
+          <LinearGradient
+            colors={GRADIENTS.primary}
+            style={[styles.placeholder, { width: dimension, height: dimension, borderRadius: dimension / 2 }]}
+          >
+            <Ionicons name="person" size={dimension * 0.4} color="#fff" />
+          </LinearGradient>
+        )}
+        {artist.isVerified && (
+          <View style={styles.verifiedBadge}>
+            <Ionicons name="checkmark-circle" size={20} color={COLORS.primary} />
+          </View>
+        )}
+      </View>
+      <Text style={styles.name} numberOfLines={1}>
+        {artist.name}
+      </Text>
+      <Text style={styles.followers}>
+        {artist.followers >= 1000 ? `${(artist.followers / 1000).toFixed(1)}K` : artist.followers} followers
+      </Text>
+    </TouchableOpacity>
+  )
+}
+
+const styles = StyleSheet.create({
+  container: {
+    alignItems: "center",
+    marginRight: 16,
+  },
+  imageWrapper: {
+    position: "relative",
+    ...SHADOWS.medium,
+  },
+  image: {
+    backgroundColor: COLORS.backgroundLight,
+  },
+  placeholder: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  verifiedBadge: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    backgroundColor: "#fff",
+    borderRadius: 10,
+  },
+  name: {
+    color: COLORS.text,
+    fontSize: 13,
+    fontWeight: "600",
+    marginTop: 10,
+    textAlign: "center",
+    maxWidth: 100,
+  },
+  followers: {
+    color: COLORS.textMuted,
+    fontSize: 11,
+    marginTop: 2,
+  },
+})
+
+export default ArtistCard
