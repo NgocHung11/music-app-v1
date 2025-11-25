@@ -13,6 +13,7 @@ import {
 const router = express.Router()
 
 // Tất cả routes đều cần đăng nhập
+router.get("/me", protectedRoute, getMyPlaylists)
 router.get("/", protectedRoute, getMyPlaylists)
 router.get("/:id", protectedRoute, getPlaylistById)
 router.post("/", protectedRoute, createPlaylist)
