@@ -115,7 +115,8 @@ export const playSong = async (req, res) => {
 // Lấy top bài hát theo khoảng thời gian
 export const getTopSongs = async (req, res) => {
   try {
-    const { period = "week", limit = 10 } = req.query
+    const period = req.params.period || req.query.period || "week"
+    const { limit = 10 } = req.query
 
     const dateFilter = new Date()
     switch (period) {
@@ -132,8 +133,7 @@ export const getTopSongs = async (req, res) => {
         dateFilter.setDate(dateFilter.getDate() - 7)
     }
 
-    // Aggregate play history để tính top songs
-    const topSongs = await PlayHistory.aggregate([
+    const topSongsFromHistory = await PlayHistory.aggregate([
       {
         $match: {
           playedAt: { $gte: dateFilter },
@@ -175,7 +175,21 @@ export const getTopSongs = async (req, res) => {
       },
     ])
 
-    res.status(200).json({ songs: topSongs, period })
+    // If no play history, fallback to songs sorted by playCount
+    if (topSongsFromHistory.length === 0) {
+      const fallbackSongs = await Song.find({ isPublished: true })
+        .populate("artist", "name avatarUrl")
+        .populate("album", "title coverUrl")
+        .sort({ playCount: -1 })
+        .limit(Number.parseInt(limit))
+
+      return res.status(200).json({
+        songs: fallbackSongs.map((song) => ({ song, playCount: song.playCount || 0 })),
+        period,
+      })
+    }
+
+    res.status(200).json({ songs: topSongsFromHistory, period })
   } catch (error) {
     console.error("getTopSongs error:", error)
     res.status(500).json({ message: "Lỗi server", error: error.message })

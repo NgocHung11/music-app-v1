@@ -1,14 +1,19 @@
+"use client"
+
 import type React from "react"
 import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native"
 import { LinearGradient } from "expo-linear-gradient"
 import { Ionicons } from "@expo/vector-icons"
 import { COLORS, SHADOWS, GRADIENTS } from "../constants/theme"
 import type { Artist } from "../types"
+import { getArtistAvatar, getArtistFollowers } from "../types"
+import { useState } from "react"
 
 type Props = {
   artist: Artist
   onPress: () => void
   size?: "small" | "medium" | "large"
+  style?: any
 }
 
 const SIZES = {
@@ -17,16 +22,23 @@ const SIZES = {
   large: 120,
 }
 
-const ArtistCard: React.FC<Props> = ({ artist, onPress, size = "medium" }) => {
+const ArtistCard: React.FC<Props> = ({ artist, onPress, size = "medium", style }) => {
   const dimension = SIZES[size]
+  const [imageError, setImageError] = useState(false)
+  const avatarUrl = getArtistAvatar(artist)
+  const isPlaceholder = avatarUrl.includes("placeholder")
+  const hasValidImage = !imageError && !isPlaceholder
+
+  const followers = getArtistFollowers(artist)
 
   return (
-    <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.8}>
+    <TouchableOpacity style={[styles.container, style]} onPress={onPress} activeOpacity={0.8}>
       <View style={[styles.imageWrapper, { width: dimension, height: dimension, borderRadius: dimension / 2 }]}>
-        {artist.avatar ? (
+        {hasValidImage ? (
           <Image
-            source={{ uri: artist.avatar }}
+            source={{ uri: avatarUrl }}
             style={[styles.image, { width: dimension, height: dimension, borderRadius: dimension / 2 }]}
+            onError={() => setImageError(true)}
           />
         ) : (
           <LinearGradient
@@ -46,7 +58,7 @@ const ArtistCard: React.FC<Props> = ({ artist, onPress, size = "medium" }) => {
         {artist.name}
       </Text>
       <Text style={styles.followers}>
-        {artist.followers >= 1000 ? `${(artist.followers / 1000).toFixed(1)}K` : artist.followers} followers
+        {followers >= 1000 ? `${(followers / 1000).toFixed(1)}K` : followers} followers
       </Text>
     </TouchableOpacity>
   )

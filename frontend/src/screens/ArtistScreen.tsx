@@ -20,6 +20,7 @@ import { artistApi } from "../api"
 import { usePlayer } from "../context/PlayerContext"
 import { useFavorite } from "../hooks/useFavorite"
 import type { Artist, Song, Album } from "../types"
+import { getArtistAvatar, getArtistFollowers } from "../types"
 import { COLORS, GRADIENTS, SHADOWS } from "../constants/theme"
 import SongItem from "../components/SongItem"
 import AlbumCard from "../components/AlbumCard"
@@ -36,6 +37,7 @@ export default function ArtistScreen() {
   const [songs, setSongs] = useState<Song[]>([])
   const [albums, setAlbums] = useState<Album[]>([])
   const [loading, setLoading] = useState(true)
+  const [imageError, setImageError] = useState(false)
 
   const { playSongs } = usePlayer()
   const { isFavorite, toggleFavorite, loading: favLoading } = useFavorite("artist", artist?._id || "")
@@ -81,17 +83,22 @@ export default function ArtistScreen() {
     )
   }
 
+  const artistImage = getArtistAvatar(artist)
+  const isPlaceholder = artistImage.includes("placeholder")
+  const hasValidImage = !imageError && !isPlaceholder
+  const followers = getArtistFollowers(artist)
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 140 }}>
         {/* Header Image */}
         <View style={styles.headerImage}>
-          {artist.coverImage ? (
-            <Image source={{ uri: artist.coverImage }} style={styles.coverImage} />
-          ) : artist.avatar ? (
-            <Image source={{ uri: artist.avatar }} style={styles.coverImage} />
+          {hasValidImage ? (
+            <Image source={{ uri: artistImage }} style={styles.coverImage} onError={() => setImageError(true)} />
           ) : (
-            <LinearGradient colors={GRADIENTS.primary} style={styles.coverImage} />
+            <LinearGradient colors={GRADIENTS.primary} style={styles.coverImage}>
+              <Ionicons name="person" size={80} color="rgba(255,255,255,0.5)" />
+            </LinearGradient>
           )}
           <LinearGradient colors={["transparent", COLORS.background]} style={styles.headerGradient} />
 
@@ -109,7 +116,7 @@ export default function ArtistScreen() {
               <Ionicons name="checkmark-circle" size={24} color={COLORS.primary} style={{ marginLeft: 8 }} />
             )}
           </View>
-          <Text style={styles.followers}>{formatFollowers(artist.followers)} followers</Text>
+          <Text style={styles.followers}>{formatFollowers(followers)} followers</Text>
 
           {artist.bio && (
             <Text style={styles.bio} numberOfLines={3}>
@@ -197,11 +204,15 @@ const styles = StyleSheet.create({
   headerImage: {
     height: 280,
     position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
   },
   coverImage: {
     width: "100%",
     height: "100%",
     backgroundColor: COLORS.backgroundLight,
+    alignItems: "center",
+    justifyContent: "center",
   },
   headerGradient: {
     position: "absolute",

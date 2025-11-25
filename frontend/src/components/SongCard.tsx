@@ -1,3 +1,5 @@
+"use client"
+
 import type React from "react"
 import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
@@ -5,9 +7,12 @@ import { LinearGradient } from "expo-linear-gradient"
 import { COLORS, BORDER_RADIUS, SHADOWS } from "../constants/theme"
 import type { Song } from "../types"
 import { getArtistName, getCoverImage } from "../types"
+import { useState } from "react"
 
 const { width } = Dimensions.get("window")
 const CARD_WIDTH = (width - 48 - 12) / 2
+
+const PLACEHOLDER_IMAGE = "https://via.placeholder.com/300x300.png?text=No+Cover"
 
 type Props = {
   song: Song
@@ -16,19 +21,23 @@ type Props = {
 }
 
 const SongCard: React.FC<Props> = ({ song, onPress, rank }) => {
+  const [imageError, setImageError] = useState(false)
+  const coverImageUrl = getCoverImage(song)
+  const imageSource = imageError ? PLACEHOLDER_IMAGE : coverImageUrl
+
   return (
     <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.8}>
       <View style={styles.imageWrapper}>
-        <Image source={{ uri: getCoverImage(song) }} style={styles.image} />
+        <Image source={{ uri: imageSource }} style={styles.image} onError={() => setImageError(true)} />
         {rank && (
           <View style={styles.rankBadge}>
             <Text style={styles.rankText}>#{rank}</Text>
           </View>
         )}
         <LinearGradient colors={["transparent", "rgba(0,0,0,0.8)"]} style={styles.gradient} />
-        <TouchableOpacity style={styles.playBtn}>
+        {/* <TouchableOpacity style={styles.playBtn}>
           <Ionicons name="play" size={18} color="#fff" />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
       <Text style={styles.title} numberOfLines={1}>
         {song.title}

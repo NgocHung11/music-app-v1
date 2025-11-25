@@ -4,6 +4,8 @@ import {
   getArtists,
   getArtistById,
   getPopularArtists,
+  getArtistSongs,
+  getArtistAlbums,
   createArtist,
   updateArtist,
   deleteArtist,
@@ -15,6 +17,8 @@ const router = express.Router()
 router.get("/", getArtists)
 router.get("/popular", getPopularArtists)
 router.get("/:id", getArtistById)
+router.get("/:id/songs", getArtistSongs)
+router.get("/:id/albums", getArtistAlbums)
 
 // ADMIN ROUTES
 router.post("/", protectedRoute, adminRoute, createArtist)

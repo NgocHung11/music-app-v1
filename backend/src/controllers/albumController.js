@@ -143,3 +143,23 @@ export const deleteAlbum = async (req, res) => {
     res.status(500).json({ message: "Lỗi server", error: error.message })
   }
 }
+
+// Lấy danh sách bài hát của album
+export const getAlbumSongs = async (req, res) => {
+  try {
+    const album = await Album.findById(req.params.id)
+    if (!album) {
+      return res.status(404).json({ message: "Không tìm thấy album" })
+    }
+
+    const songs = await Song.find({ album: req.params.id, isPublished: true })
+      .populate("artist", "name avatarUrl")
+      .populate("album", "title coverUrl")
+      .sort({ createdAt: 1 })
+
+    res.status(200).json({ songs })
+  } catch (error) {
+    console.error("getAlbumSongs error:", error)
+    res.status(500).json({ message: "Lỗi server", error: error.message })
+  }
+}

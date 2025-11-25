@@ -1,5 +1,6 @@
 import Genre from "../models/Genre.js"
 import Song from "../models/Song.js"
+import Album from "../models/Album.js"
 
 // Lấy tất cả thể loại
 export const getGenres = async (req, res) => {
@@ -100,6 +101,61 @@ export const deleteGenre = async (req, res) => {
     res.status(200).json({ message: "Đã xóa thể loại" })
   } catch (error) {
     console.error("deleteGenre error:", error)
+    res.status(500).json({ message: "Lỗi server", error: error.message })
+  }
+}
+
+export const getGenreSongs = async (req, res) => {
+  try {
+    const { page = 1, limit = 20 } = req.query
+    const skip = (Number.parseInt(page) - 1) * Number.parseInt(limit)
+
+    const genre = await Genre.findById(req.params.id)
+    if (!genre) {
+      return res.status(404).json({ message: "Không tìm thấy thể loại" })
+    }
+
+    const songs = await Song.find({ genre: req.params.id, isPublished: true })
+      .populate("artist", "name avatarUrl")
+      .populate("album", "title coverUrl")
+      .sort({ playCount: -1 })
+      .skip(skip)
+      .limit(Number.parseInt(limit))
+
+    const total = await Song.countDocuments({ genre: req.params.id, isPublished: true })
+
+    res.status(200).json({
+      songs,
+      pagination: {
+        page: Number.parseInt(page),
+        limit: Number.parseInt(limit),
+        total,
+        totalPages: Math.ceil(total / Number.parseInt(limit)),
+      },
+    })
+  } catch (error) {
+    console.error("getGenreSongs error:", error)
+    res.status(500).json({ message: "Lỗi server", error: error.message })
+  }
+}
+
+export const getGenreAlbums = async (req, res) => {
+  try {
+    const genre = await Genre.findById(req.params.id)
+    if (!genre) {
+      return res.status(404).json({ message: "Không tìm thấy thể loại" })
+    }
+
+    // Get songs in this genre to find their albums
+    const songsInGenre = await Song.find({ genre: req.params.id, isPublished: true }).distinct("album")
+
+    const albums = await Album.find({ _id: { $in: songsInGenre }, isPublished: true })
+      .populate("artist", "name avatarUrl")
+      .sort({ releaseDate: -1 })
+
+    res.status(200).json({ albums })
+  } catch (error) {
+    console.error("getGenreAlbums error:", error)
     res.status(500).json({ message: "Lỗi server", error: error.message })
   }
 }

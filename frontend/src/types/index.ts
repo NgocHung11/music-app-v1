@@ -17,10 +17,13 @@ export interface Artist {
   name: string
   bio?: string
   avatar?: string
+  avatarUrl?: string // Backend uses this
   coverImage?: string
-  followers: number
+  coverUrl?: string // Backend uses this
+  followers?: number
+  followersCount?: number // Backend uses this
   isVerified: boolean
-  genres: string[]
+  genres?: string[]
   socialLinks?: {
     facebook?: string
     instagram?: string
@@ -43,6 +46,7 @@ export interface Album {
   title: string
   artist: Artist | string
   coverImage?: string
+  coverUrl?: string // Added coverUrl field to match backend
   releaseDate?: string
   genre?: Genre | string
   description?: string
@@ -61,6 +65,7 @@ export interface Song {
   duration: number
   audioUrl: string
   coverImage?: string
+  coverUrl?: string // Added coverUrl field to match backend
   lyrics?: string
   playCount: number
   releaseDate?: string
@@ -137,8 +142,47 @@ export const getGenreName = (genre?: Genre | string): string => {
   return genre.name
 }
 
-export const getCoverImage = (item: Song | Album | Artist | Playlist): string => {
+const PLACEHOLDER_IMAGE = "https://via.placeholder.com/300x300.png?text=No+Cover"
+
+export const getCoverImage = (item: Song | Album | Artist | Playlist | null | undefined): string => {
+  if (!item) return PLACEHOLDER_IMAGE
+
+  // Check direct coverUrl first (backend uses this)
+  if ("coverUrl" in item && item.coverUrl) return item.coverUrl
+
+  // Check coverImage
   if ("coverImage" in item && item.coverImage) return item.coverImage
+
+  // Check avatarUrl (for artists - backend uses this)
+  if ("avatarUrl" in item && item.avatarUrl) return item.avatarUrl
+
+  // Check avatar (for artists)
   if ("avatar" in item && item.avatar) return item.avatar
-  return "https://via.placeholder.com/300x300?text=No+Image"
+
+  // For songs: try to get cover from album or artist
+  if ("album" in item && item.album && typeof item.album !== "string") {
+    const album = item.album as Album
+    if (album.coverUrl) return album.coverUrl
+    if (album.coverImage) return album.coverImage
+  }
+
+  if ("artist" in item && item.artist && typeof item.artist !== "string") {
+    const artist = item.artist as Artist
+    if (artist.avatarUrl) return artist.avatarUrl
+    if (artist.avatar) return artist.avatar
+    if (artist.coverUrl) return artist.coverUrl
+    if (artist.coverImage) return artist.coverImage
+  }
+
+  return PLACEHOLDER_IMAGE
+}
+
+export const getArtistAvatar = (artist: Artist | string | null | undefined): string => {
+  if (!artist || typeof artist === "string") return PLACEHOLDER_IMAGE
+  return artist.avatarUrl || artist.avatar || artist.coverUrl || artist.coverImage || PLACEHOLDER_IMAGE
+}
+
+export const getArtistFollowers = (artist: Artist | null | undefined): number => {
+  if (!artist) return 0
+  return artist.followersCount ?? artist.followers ?? 0
 }

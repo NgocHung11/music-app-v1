@@ -1,12 +1,17 @@
+"use client"
+
 import type React from "react"
 import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { COLORS, BORDER_RADIUS, SHADOWS } from "../constants/theme"
 import type { Album } from "../types"
 import { getArtistName, getCoverImage } from "../types"
+import { useState } from "react"
 
 const { width } = Dimensions.get("window")
 const CARD_WIDTH = width * 0.4
+
+const PLACEHOLDER_IMAGE = "https://via.placeholder.com/300x300.png?text=No+Cover"
 
 type Props = {
   album: Album
@@ -14,10 +19,14 @@ type Props = {
 }
 
 const AlbumCard: React.FC<Props> = ({ album, onPress }) => {
+  const [imageError, setImageError] = useState(false)
+  const coverImageUrl = getCoverImage(album)
+  const imageSource = imageError ? PLACEHOLDER_IMAGE : coverImageUrl
+
   return (
     <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.8}>
       <View style={styles.imageWrapper}>
-        <Image source={{ uri: getCoverImage(album) }} style={styles.image} />
+        <Image source={{ uri: imageSource }} style={styles.image} onError={() => setImageError(true)} />
         <View style={styles.overlay}>
           <Ionicons name="play-circle" size={40} color="rgba(255,255,255,0.9)" />
         </View>
