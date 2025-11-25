@@ -5,27 +5,27 @@ import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { NavigationContainer } from "@react-navigation/native"
 import { createNativeStackNavigator } from "@react-navigation/native-stack"
 import { ActivityIndicator, View } from "react-native"
-import { AuthProvider, useAuth } from "./context/AuthContext"
-import { PlayerProvider } from "./context/PlayerContext"
-import { COLORS } from "./constants/theme"
+import { AuthProvider, useAuth } from "./src/context/AuthContext"
+import { PlayerProvider } from "./src/context/PlayerContext"
+import { COLORS } from "./src/constants/theme"
 
 // Auth Screens
-import SignInScreen from "./screens/SignInScreen"
-import SignUpScreen from "./screens/SignUpScreen"
+import SignInScreen from "./src/screens/SignInScreen"
+import SignUpScreen from "./src/screens/SignUpScreen"
 
 // Main Tabs
-import MainTabs from "./navigation/MainTabs"
+import MainTabs from "./src/navigation/MainTabs"
 
 // Detail Screens
-import SearchScreen from "./screens/SearchScreen"
-import SongsScreen from "./screens/SongsScreen"
-import AlbumScreen from "./screens/AlbumScreen"
-import ArtistScreen from "./screens/ArtistScreen"
-import GenreScreen from "./screens/GenreScreen"
-import PlaylistScreen from "./screens/PlaylistScreen"
-import HistoryScreen from "./screens/HistoryScreen"
-import LikedSongsScreen from "./screens/LikedSongsScreen"
-import EditProfileScreen from "./screens/EditProfileScreen"
+import SearchScreen from "./src/screens/SearchScreen"
+import SongsScreen from "./src/screens/SongsScreen"
+import AlbumScreen from "./src/screens/AlbumScreen"
+import ArtistScreen from "./src/screens/ArtistScreen"
+import GenreScreen from "./src/screens/GenreScreen"
+import PlaylistScreen from "./src/screens/PlaylistScreen"
+import HistoryScreen from "./src/screens/HistoryScreen"
+import LikedSongsScreen from "./src/screens/LikedSongsScreen"
+import EditProfileScreen from "./src/screens/EditProfileScreen"
 
 // Types for navigation
 export type RootStackParamList = {
