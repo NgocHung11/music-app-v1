@@ -9,13 +9,10 @@ import PlayerScreen from "./src/screens/PlayerScreen";
 import MainTabs from "./src/navigation/MainTabs";
 import SearchScreen from "./src/screens/SearchScreen";
 
-
 export type RootStackParamList = {
   SignIn: undefined;
   SignUp: undefined;
-  Songs: undefined;
   MainTabs: undefined;
-  Explore: undefined;
   Search: undefined;
   Player: {
     song: {
@@ -28,51 +25,54 @@ export type RootStackParamList = {
     };
     songs: any[];
     index: number;
-
   };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-const RootNavigator = () => {
+// ⬇️ WRAPPER phân nhánh user login
+function RootNavigator() {
   const { user } = useAuth();
 
-  return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {user ? (
-        <>
-          <Stack.Screen name="MainTabs" component={MainTabs} />
-          <Stack.Screen name="Player" component={PlayerScreen} />
-          <Stack.Screen
-            name="Search"
-            component={SearchScreen}
-            options={{
-              headerShown: true,
-              headerStyle: { backgroundColor: "#000" },
-              headerTintColor: "#fff",
-              title: "Tìm kiếm bài hát",
-            }}
-          />
+  if (!user) {
+    // ⛔ CHƯA đăng nhập
+    return (
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="SignIn" component={SignInScreen} />
+        <Stack.Screen name="SignUp" component={SignUpScreen} />
+      </Stack.Navigator>
+    );
+  }
 
-        </>
-      ) : (
-        <>
-          <Stack.Screen name="SignIn" component={SignInScreen} />
-          <Stack.Screen name="SignUp" component={SignUpScreen} />
-        </>
-      )}
-    </Stack.Navigator>
+  // ✅ ĐÃ đăng nhập → bọc PlayerProvider tại đây
+  return (
+    <PlayerProvider>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="MainTabs" component={MainTabs} />
+
+        <Stack.Screen
+          name="Search"
+          component={SearchScreen}
+          options={{
+            headerShown: true,
+            headerStyle: { backgroundColor: "#000" },
+            headerTintColor: "#fff",
+            title: "Tìm kiếm bài hát",
+          }}
+        />
+
+        <Stack.Screen name="Player" component={PlayerScreen} />
+      </Stack.Navigator>
+    </PlayerProvider>
   );
-};
+}
 
 export default function App() {
   return (
     <AuthProvider>
-      <PlayerProvider>
-        <NavigationContainer>
-          <RootNavigator />
-        </NavigationContainer>
-      </PlayerProvider>
+      <NavigationContainer>
+        <RootNavigator />
+      </NavigationContainer>
     </AuthProvider>
   );
 }
