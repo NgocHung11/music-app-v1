@@ -1,6 +1,6 @@
 import mongoose from "mongoose"
 
-const songSchema = new mongoose.Schema(
+const albumSchema = new mongoose.Schema(
   {
     title: {
       type: String,
@@ -12,35 +12,23 @@ const songSchema = new mongoose.Schema(
       ref: "Artist",
       required: true,
     },
-    album: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Album",
-      default: null,
-    },
-    genre: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Genre",
-      default: null,
-    },
     coverUrl: {
       type: String,
       required: true,
     },
-    audioUrl: {
-      type: String,
-      required: true,
+    releaseDate: {
+      type: Date,
+      default: Date.now,
     },
-    duration: {
-      type: Number,
-      default: 0,
-    },
-    lyrics: {
+    description: {
       type: String,
       default: "",
     },
-    playCount: {
-      type: Number,
-      default: 0,
+    // Loại album: album, single, EP
+    type: {
+      type: String,
+      enum: ["album", "single", "ep"],
+      default: "album",
     },
     isPublished: {
       type: Boolean,
@@ -55,7 +43,6 @@ const songSchema = new mongoose.Schema(
   { timestamps: true },
 )
 
-// Index cho tìm kiếm
-songSchema.index({ title: "text" })
+albumSchema.index({ title: "text" })
 
-export default mongoose.model("Song", songSchema)
+export default mongoose.model("Album", albumSchema)
