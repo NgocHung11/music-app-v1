@@ -1,68 +1,136 @@
 import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions } from "react-native"
 import { usePlayer } from "../context/PlayerContext"
+import { useFavorite } from "../hooks/useFavorite"
 import { Ionicons } from "@expo/vector-icons"
 import { LinearGradient } from "expo-linear-gradient"
+import { useNavigation } from "@react-navigation/native"
 import ProgressBar from "../components/ProgressBar"
+import { COLORS, GRADIENTS, BORDER_RADIUS, SHADOWS } from "../constants/theme"
 
 const { width } = Dimensions.get("window")
 
 export default function PlayerScreen() {
-  const { currentSong, isPlaying, positionMillis, durationMillis, togglePlay, nextSong, prevSong } = usePlayer()
+  const navigation = useNavigation<any>()
+  const {
+    currentSong,
+    isPlaying,
+    positionMillis,
+    durationMillis,
+    shuffle,
+    repeatMode,
+    togglePlay,
+    nextSong,
+    prevSong,
+    toggleShuffle,
+    toggleRepeat,
+  } = usePlayer()
+
+  const { isFavorite, toggleFavorite } = useFavorite("song", currentSong?._id || "")
 
   if (!currentSong) {
     return (
-      <LinearGradient colors={["#0a0a12", "#1a1a2e"]} style={styles.emptyContainer}>
-        <Ionicons name="headset-outline" size={96} color="#4a5fd9" style={{ marginBottom: 24 }} />
-        <Text style={styles.emptyTitle}>No song selected</Text>
+      <LinearGradient colors={GRADIENTS.background} style={styles.emptyContainer}>
+        <Ionicons name="headset-outline" size={96} color={COLORS.primary} style={{ marginBottom: 24 }} />
+        <Text style={styles.emptyTitle}>No song playing</Text>
         <Text style={styles.emptySubtitle}>Choose a song from your library to start listening</Text>
+        <TouchableOpacity style={styles.browseBtn} onPress={() => navigation.navigate("MainTabs", { screen: "Home" })}>
+          <Text style={styles.browseBtnText}>Browse Music</Text>
+        </TouchableOpacity>
       </LinearGradient>
     )
   }
 
+  const getRepeatIcon = () => {
+    if (repeatMode === "one") return "repeat-outline"
+    return "repeat"
+  }
+
   return (
-    <LinearGradient colors={["#0a0a12", "#1a1a2e", "#0a0a12"]} style={styles.container}>
+    <LinearGradient colors={GRADIENTS.background} style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
+          <Ionicons name="chevron-down" size={28} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Now Playing</Text>
+        <TouchableOpacity style={styles.headerBtn}>
+          <Ionicons name="ellipsis-horizontal" size={24} color="#fff" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Cover Art */}
       <View style={styles.coverContainer}>
         <View style={styles.coverWrapper}>
           <Image source={{ uri: currentSong.coverUrl }} style={styles.cover} />
         </View>
       </View>
 
+      {/* Song Info */}
       <View style={styles.infoContainer}>
-        <Text style={styles.title} numberOfLines={1}>
-          {currentSong.title}
-        </Text>
-        <Text style={styles.artist} numberOfLines={1}>
-          {currentSong.artist}
-        </Text>
+        <View style={styles.infoRow}>
+          <View style={styles.infoText}>
+            <Text style={styles.title} numberOfLines={1}>
+              {currentSong.title}
+            </Text>
+            <Text style={styles.artist} numberOfLines={1}>
+              {currentSong.artist}
+            </Text>
+          </View>
+          <TouchableOpacity onPress={toggleFavorite} style={styles.favoriteBtn}>
+            <Ionicons
+              name={isFavorite ? "heart" : "heart-outline"}
+              size={28}
+              color={isFavorite ? COLORS.error : COLORS.text}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
+      {/* Progress Bar */}
       <View style={styles.progressContainer}>
         <ProgressBar positionMillis={positionMillis} durationMillis={durationMillis} />
       </View>
 
+      {/* Controls */}
       <View style={styles.controls}>
-        <TouchableOpacity onPress={prevSong} style={styles.sideBtn}>
+        <TouchableOpacity onPress={toggleShuffle} style={styles.secondaryBtn}>
+          <Ionicons name="shuffle" size={24} color={shuffle ? COLORS.primary : COLORS.textSecondary} />
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={prevSong} style={styles.controlBtn}>
           <Ionicons name="play-skip-back" size={32} color="#fff" />
         </TouchableOpacity>
 
         <TouchableOpacity onPress={togglePlay} style={styles.playBtn}>
-          <Ionicons name={isPlaying ? "pause" : "play"} size={40} color="#fff" />
+          <LinearGradient colors={GRADIENTS.primary} style={styles.playBtnGradient}>
+            <Ionicons name={isPlaying ? "pause" : "play"} size={36} color="#fff" />
+          </LinearGradient>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={nextSong} style={styles.sideBtn}>
+        <TouchableOpacity onPress={nextSong} style={styles.controlBtn}>
           <Ionicons name="play-skip-forward" size={32} color="#fff" />
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={toggleRepeat} style={styles.secondaryBtn}>
+          <Ionicons
+            name={getRepeatIcon() as any}
+            size={24}
+            color={repeatMode !== "off" ? COLORS.primary : COLORS.textSecondary}
+          />
+          {repeatMode === "one" && <View style={styles.repeatOneDot} />}
         </TouchableOpacity>
       </View>
 
-      <View style={styles.actions}>
+      {/* Bottom Actions */}
+      <View style={styles.bottomActions}>
         <TouchableOpacity style={styles.actionBtn}>
-          <Ionicons name="heart-outline" size={24} color="#fff" />
+          <Ionicons name="share-outline" size={22} color={COLORS.textSecondary} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionBtn}>
-          <Ionicons name="share-outline" size={24} color="#fff" />
+          <Ionicons name="list" size={22} color={COLORS.textSecondary} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionBtn}>
-          <Ionicons name="ellipsis-horizontal" size={24} color="#fff" />
+          <Ionicons name="add-circle-outline" size={22} color={COLORS.textSecondary} />
         </TouchableOpacity>
       </View>
     </LinearGradient>
@@ -72,96 +140,9 @@ export default function PlayerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 60,
+    paddingTop: 50,
     paddingHorizontal: 24,
     paddingBottom: 40,
-  },
-  coverContainer: {
-    alignItems: "center",
-    marginBottom: 40,
-  },
-  coverWrapper: {
-    shadowColor: "#4a5fd9",
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.6,
-    shadowRadius: 30,
-    elevation: 20,
-    borderRadius: 20,
-  },
-  cover: {
-    width: width - 80,
-    height: width - 80,
-    borderRadius: 20,
-    backgroundColor: "#1a1a2e",
-  },
-  infoContainer: {
-    alignItems: "center",
-    marginBottom: 32,
-    paddingHorizontal: 20,
-  },
-  title: {
-    color: "#fff",
-    fontSize: 26,
-    fontWeight: "800",
-    textAlign: "center",
-    letterSpacing: 0.5,
-    marginBottom: 8,
-  },
-  artist: {
-    color: "#9999b3",
-    fontSize: 17,
-    fontWeight: "500",
-    textAlign: "center",
-    letterSpacing: 0.3,
-  },
-  progressContainer: {
-    marginBottom: 40,
-  },
-  controls: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 32,
-    marginBottom: 32,
-  },
-  sideBtn: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "#1a1a2e",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#2a2a3e",
-  },
-  playBtn: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#4a5fd9",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#4a5fd9",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.6,
-    shadowRadius: 16,
-    elevation: 12,
-  },
-  actions: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 40,
-  },
-  actionBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#1a1a2e",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#2a2a3e",
   },
   emptyContainer: {
     flex: 1,
@@ -170,18 +151,147 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   emptyTitle: {
-    color: "#fff",
+    color: COLORS.text,
     fontSize: 24,
     fontWeight: "800",
     textAlign: "center",
     marginBottom: 12,
-    letterSpacing: 0.5,
   },
   emptySubtitle: {
-    color: "#9999b3",
+    color: COLORS.textSecondary,
     fontSize: 16,
     textAlign: "center",
     lineHeight: 24,
-    letterSpacing: 0.3,
+  },
+  browseBtn: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 28,
+    marginTop: 32,
+  },
+  browseBtnText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 24,
+  },
+  headerBtn: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerTitle: {
+    color: COLORS.textSecondary,
+    fontSize: 14,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  coverContainer: {
+    alignItems: "center",
+    marginBottom: 32,
+  },
+  coverWrapper: {
+    ...SHADOWS.large,
+    shadowColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.xl,
+  },
+  cover: {
+    width: width - 80,
+    height: width - 80,
+    borderRadius: BORDER_RADIUS.xl,
+    backgroundColor: COLORS.backgroundLight,
+  },
+  infoContainer: {
+    marginBottom: 24,
+  },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  infoText: {
+    flex: 1,
+  },
+  title: {
+    color: COLORS.text,
+    fontSize: 22,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  artist: {
+    color: COLORS.textSecondary,
+    fontSize: 16,
+    fontWeight: "500",
+  },
+  favoriteBtn: {
+    padding: 8,
+  },
+  progressContainer: {
+    marginBottom: 32,
+  },
+  controls: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 20,
+    marginBottom: 32,
+  },
+  secondaryBtn: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+  },
+  repeatOneDot: {
+    position: "absolute",
+    bottom: 4,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: COLORS.primary,
+  },
+  controlBtn: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: COLORS.backgroundLight,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  playBtn: {
+    ...SHADOWS.primary,
+  },
+  playBtnGradient: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bottomActions: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 40,
+  },
+  actionBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.backgroundLight,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
 })

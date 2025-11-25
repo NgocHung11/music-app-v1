@@ -1,69 +1,115 @@
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs"
-import SongsScreen from "../screens/SongsScreen"
-import PlayerScreen from "../screens/PlayerScreen"
-import ProfileScreen from "../screens/ProfileScreen"
-import MiniPlayer from "../components/MiniPlayer"
-import { View, StyleSheet } from "react-native"
+import type React from "react"
+import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
+import { COLORS, BORDER_RADIUS, SHADOWS } from "../constants/theme"
+import type { Song } from "../types"
+import { getArtistName, getCoverImage } from "../types"
 
-export type RootStackParamList = {
-  Songs: undefined
-  Profile: undefined
-  Explore: undefined
+type Props = {
+  song: Song
+  onPress: () => void
+  showMenu?: boolean
+  onMenuPress?: () => void
+  index?: number
 }
 
-const Tab = createBottomTabNavigator<RootStackParamList>()
+const SongItem: React.FC<Props> = ({ song, onPress, showMenu = true, onMenuPress, index }) => {
+  const formatDuration = (seconds?: number) => {
+    if (!seconds) return "--:--"
+    const m = Math.floor(seconds / 60)
+    const s = seconds % 60
+    return `${m}:${s.toString().padStart(2, "0")}`
+  }
 
-export default function MainTabs() {
   return (
-    <View style={{ flex: 1 }}>
-      <Tab.Navigator
-        initialRouteName="Songs"
-        screenOptions={({ route }) => ({
-          headerShown: false,
-          tabBarShowLabel: true,
-          tabBarActiveTintColor: "#4a5fd9",
-          tabBarInactiveTintColor: "#666",
-          tabBarStyle: styles.tabBar,
-          tabBarLabelStyle: styles.tabBarLabel,
-          tabBarIcon: ({ color, size, focused }) => {
-            let icon = "musical-notes"
-            if (route.name === "Explore") icon = "play-circle"
-            if (route.name === "Profile") icon = "person"
-
-            const iconName = focused ? icon : `${icon}-outline`
-
-            return <Ionicons name={iconName as any} color={color} size={focused ? size + 2 : size} />
-          },
-        })}
-      >
-        <Tab.Screen name="Explore" component={PlayerScreen} />
-        <Tab.Screen name="Songs" component={SongsScreen} />
-        <Tab.Screen name="Profile" component={ProfileScreen} />
-      </Tab.Navigator>
-
-      <MiniPlayer />
-    </View>
+    <TouchableOpacity style={styles.item} onPress={onPress} activeOpacity={0.7}>
+      {index !== undefined && <Text style={styles.index}>{index + 1}</Text>}
+      <View style={styles.coverWrapper}>
+        <Image source={{ uri: getCoverImage(song) }} style={styles.cover} />
+      </View>
+      <View style={styles.meta}>
+        <Text numberOfLines={1} style={styles.title}>
+          {song.title}
+        </Text>
+        <View style={styles.subtitleRow}>
+          <Text numberOfLines={1} style={styles.artist}>
+            {getArtistName(song.artist)}
+          </Text>
+          <Text style={styles.dot}>•</Text>
+          <Text style={styles.duration}>{formatDuration(song.duration)}</Text>
+        </View>
+      </View>
+      {showMenu && (
+        <TouchableOpacity onPress={onMenuPress} style={styles.menuBtn}>
+          <Ionicons name="ellipsis-vertical" size={20} color={COLORS.textSecondary} />
+        </TouchableOpacity>
+      )}
+    </TouchableOpacity>
   )
 }
 
 const styles = StyleSheet.create({
-  tabBar: {
-    backgroundColor: "#0d0d15",
-    borderTopColor: "#1a1a2e",
-    borderTopWidth: 1,
-    height: 60,
-    paddingBottom: 6,
-    paddingTop: 6,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 16,
+  item: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginHorizontal: 12,
+    marginVertical: 4,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
   },
-  tabBarLabel: {
-    fontSize: 11,
+  index: {
+    color: COLORS.textSecondary,
+    fontSize: 14,
     fontWeight: "600",
+    width: 24,
+    textAlign: "center",
+  },
+  coverWrapper: {
+    ...SHADOWS.small,
+    borderRadius: 10,
+  },
+  cover: {
+    width: 56,
+    height: 56,
+    borderRadius: 10,
+    backgroundColor: COLORS.backgroundLight,
+  },
+  meta: {
+    flex: 1,
+    marginLeft: 14,
+  },
+  title: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: COLORS.text,
     letterSpacing: 0.3,
   },
+  subtitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 5,
+  },
+  artist: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    letterSpacing: 0.2,
+    flex: 1,
+  },
+  dot: {
+    color: COLORS.textMuted,
+    marginHorizontal: 6,
+  },
+  duration: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+  },
+  menuBtn: {
+    padding: 8,
+  },
 })
+
+export default SongItem

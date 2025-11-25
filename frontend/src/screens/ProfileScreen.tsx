@@ -1,86 +1,140 @@
 "use client"
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from "react-native"
+
+import { useEffect, useState } from "react"
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Alert } from "react-native"
 import { LinearGradient } from "expo-linear-gradient"
 import { Ionicons } from "@expo/vector-icons"
 import { SafeAreaView } from "react-native-safe-area-context"
+import { useNavigation } from "@react-navigation/native"
 import { useAuth } from "../context/AuthContext"
+import { userApi } from "../api"
+import { COLORS, GRADIENTS, BORDER_RADIUS, SHADOWS } from "../constants/theme"
 
 export default function ProfileScreen() {
+  const navigation = useNavigation<any>()
   const { user, signOut } = useAuth()
+
+  const [stats, setStats] = useState({
+    totalListeningTime: 0,
+    totalSongsPlayed: 0,
+    totalPlaylists: 0,
+    favoriteGenre: "",
+  })
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await userApi.getStats()
+        setStats(res.data)
+      } catch (error) {
+        console.warn("fetchStats error", error)
+      }
+    }
+    fetchStats()
+  }, [])
+
+  const handleSignOut = () => {
+    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Sign Out", style: "destructive", onPress: signOut },
+    ])
+  }
+
+  const formatListeningTime = (minutes: number) => {
+    const hours = Math.floor(minutes / 60)
+    if (hours > 0) return `${hours}h ${minutes % 60}m`
+    return `${minutes}m`
+  }
+
+  const menuItems = [
+    { icon: "person-outline", label: "Edit Profile", screen: "EditProfile" },
+    { icon: "notifications-outline", label: "Notifications", screen: "Notifications" },
+    { icon: "musical-notes-outline", label: "Audio Quality", screen: "AudioQuality" },
+    { icon: "download-outline", label: "Downloads", screen: "Downloads" },
+    { icon: "shield-outline", label: "Privacy", screen: "Privacy" },
+    { icon: "help-circle-outline", label: "Help & Support", screen: "Help" },
+    { icon: "information-circle-outline", label: "About", screen: "About" },
+  ]
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-      <LinearGradient colors={["#0a0a12", "#1a1a2e"]} style={styles.gradient}>
+      <LinearGradient colors={GRADIENTS.background} style={styles.gradient}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          {/* Header */}
           <View style={styles.headerSection}>
             <View style={styles.avatarContainer}>
-              <LinearGradient colors={["#4a5fd9", "#7c3aed"]} style={styles.avatar}>
-                <Ionicons name="person" size={48} color="#fff" />
-              </LinearGradient>
+              {user?.avatar ? (
+                <Image source={{ uri: user.avatar }} style={styles.avatar} />
+              ) : (
+                <LinearGradient colors={GRADIENTS.primary} style={styles.avatar}>
+                  <Ionicons name="person" size={48} color="#fff" />
+                </LinearGradient>
+              )}
+              <TouchableOpacity style={styles.editAvatarBtn} onPress={() => navigation.navigate("EditProfile")}>
+                <Ionicons name="camera" size={16} color="#fff" />
+              </TouchableOpacity>
             </View>
 
-            <Text style={styles.username}>{user?.username || "New User"}</Text>
+            <Text style={styles.username}>
+              {user?.firstName ? `${user.firstName} ${user.lastName || ""}`.trim() : user?.username || "User"}
+            </Text>
             {user?.email && <Text style={styles.email}>{user.email}</Text>}
           </View>
 
+          {/* Stats */}
           <View style={styles.statsContainer}>
             <View style={styles.statCard}>
-              <Ionicons name="musical-notes" size={28} color="#4a5fd9" style={{ marginBottom: 8 }} />
-              <Text style={styles.statValue}>58</Text>
-              <Text style={styles.statLabel}>Songs</Text>
-            </View>
-
-            <View style={styles.statCard}>
-              <Ionicons name="list" size={28} color="#4a5fd9" style={{ marginBottom: 8 }} />
-              <Text style={styles.statValue}>12</Text>
-              <Text style={styles.statLabel}>Playlists</Text>
-            </View>
-
-            <View style={styles.statCard}>
-              <Ionicons name="time" size={28} color="#4a5fd9" style={{ marginBottom: 8 }} />
-              <Text style={styles.statValue}>35h</Text>
+              <Ionicons name="time-outline" size={24} color={COLORS.primary} style={{ marginBottom: 8 }} />
+              <Text style={styles.statValue}>{formatListeningTime(stats.totalListeningTime)}</Text>
               <Text style={styles.statLabel}>Listening</Text>
             </View>
+
+            <View style={styles.statCard}>
+              <Ionicons name="musical-notes-outline" size={24} color={COLORS.primary} style={{ marginBottom: 8 }} />
+              <Text style={styles.statValue}>{stats.totalSongsPlayed}</Text>
+              <Text style={styles.statLabel}>Songs Played</Text>
+            </View>
+
+            <View style={styles.statCard}>
+              <Ionicons name="list-outline" size={24} color={COLORS.primary} style={{ marginBottom: 8 }} />
+              <Text style={styles.statValue}>{stats.totalPlaylists}</Text>
+              <Text style={styles.statLabel}>Playlists</Text>
+            </View>
           </View>
 
+          {/* Favorite Genre */}
+          {stats.favoriteGenre && (
+            <View style={styles.favoriteGenre}>
+              <Text style={styles.favoriteGenreLabel}>Your Top Genre</Text>
+              <Text style={styles.favoriteGenreValue}>{stats.favoriteGenre}</Text>
+            </View>
+          )}
+
+          {/* Menu Items */}
           <View style={styles.menuSection}>
-            <TouchableOpacity style={styles.menuItem}>
-              <View style={styles.menuIconWrapper}>
-                <Ionicons name="person-outline" size={22} color="#4a5fd9" />
-              </View>
-              <Text style={styles.menuText}>Edit Profile</Text>
-              <Ionicons name="chevron-forward" size={20} color="#666" />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.menuItem}>
-              <View style={styles.menuIconWrapper}>
-                <Ionicons name="heart-outline" size={22} color="#4a5fd9" />
-              </View>
-              <Text style={styles.menuText}>Favorites</Text>
-              <Ionicons name="chevron-forward" size={20} color="#666" />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.menuItem}>
-              <View style={styles.menuIconWrapper}>
-                <Ionicons name="settings-outline" size={22} color="#4a5fd9" />
-              </View>
-              <Text style={styles.menuText}>Settings</Text>
-              <Ionicons name="chevron-forward" size={20} color="#666" />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.menuItem}>
-              <View style={styles.menuIconWrapper}>
-                <Ionicons name="help-circle-outline" size={22} color="#4a5fd9" />
-              </View>
-              <Text style={styles.menuText}>Help & Support</Text>
-              <Ionicons name="chevron-forward" size={20} color="#666" />
-            </TouchableOpacity>
+            {menuItems.map((item, index) => (
+              <TouchableOpacity
+                key={index}
+                style={[styles.menuItem, index === menuItems.length - 1 && { borderBottomWidth: 0 }]}
+                onPress={() => navigation.navigate(item.screen)}
+              >
+                <View style={styles.menuIconWrapper}>
+                  <Ionicons name={item.icon as any} size={22} color={COLORS.primary} />
+                </View>
+                <Text style={styles.menuText}>{item.label}</Text>
+                <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
+              </TouchableOpacity>
+            ))}
           </View>
 
-          <TouchableOpacity style={styles.logoutButton} onPress={signOut}>
+          {/* Sign Out Button */}
+          <TouchableOpacity style={styles.logoutButton} onPress={handleSignOut}>
             <Ionicons name="log-out-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
             <Text style={styles.logoutText}>Sign Out</Text>
           </TouchableOpacity>
+
+          {/* App Version */}
+          <Text style={styles.version}>Version 1.0.0</Text>
         </ScrollView>
       </LinearGradient>
     </SafeAreaView>
@@ -90,27 +144,25 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0a0a12",
+    backgroundColor: COLORS.background,
   },
   gradient: {
     flex: 1,
   },
   scrollContent: {
     padding: 20,
-    paddingBottom: 120,
+    paddingBottom: 140,
   },
   headerSection: {
     alignItems: "center",
-    marginBottom: 32,
-    marginTop: 20,
+    marginBottom: 24,
+    marginTop: 12,
   },
   avatarContainer: {
+    position: "relative",
     marginBottom: 16,
-    shadowColor: "#4a5fd9",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 16,
-    elevation: 10,
+    ...SHADOWS.large,
+    shadowColor: COLORS.primary,
   },
   avatar: {
     width: 100,
@@ -119,100 +171,137 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 3,
-    borderColor: "#2a2a3e",
+    borderColor: COLORS.border,
+  },
+  editAvatarBtn: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: COLORS.background,
   },
   username: {
-    color: "#fff",
-    fontSize: 26,
+    color: COLORS.text,
+    fontSize: 24,
     fontWeight: "800",
     letterSpacing: 0.5,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   email: {
-    color: "#9999b3",
-    fontSize: 15,
+    color: COLORS.textSecondary,
+    fontSize: 14,
     fontWeight: "500",
     letterSpacing: 0.3,
   },
   statsContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 32,
+    marginBottom: 20,
     gap: 12,
   },
   statCard: {
     flex: 1,
-    backgroundColor: "#1a1a2e",
-    borderRadius: 16,
+    backgroundColor: COLORS.backgroundLight,
+    borderRadius: BORDER_RADIUS.lg,
     paddingVertical: 20,
     paddingHorizontal: 12,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#2a2a3e",
+    borderColor: COLORS.border,
   },
   statValue: {
-    color: "#fff",
-    fontSize: 22,
+    color: COLORS.text,
+    fontSize: 20,
     fontWeight: "800",
     letterSpacing: 0.5,
   },
   statLabel: {
-    color: "#9999b3",
-    fontSize: 12,
+    color: COLORS.textSecondary,
+    fontSize: 11,
     marginTop: 4,
     fontWeight: "600",
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
-  menuSection: {
-    backgroundColor: "#1a1a2e",
-    borderRadius: 16,
+  favoriteGenre: {
+    backgroundColor: COLORS.backgroundLight,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: 16,
+    marginBottom: 20,
     borderWidth: 1,
-    borderColor: "#2a2a3e",
+    borderColor: COLORS.border,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  favoriteGenreLabel: {
+    color: COLORS.textSecondary,
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  favoriteGenreValue: {
+    color: COLORS.primary,
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  menuSection: {
+    backgroundColor: COLORS.backgroundLight,
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     marginBottom: 24,
     overflow: "hidden",
   },
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 16,
+    paddingVertical: 14,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#2a2a3e",
+    borderBottomColor: COLORS.border,
   },
   menuIconWrapper: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#0d0d15",
+    backgroundColor: COLORS.surface,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 14,
   },
   menuText: {
     flex: 1,
-    color: "#fff",
-    fontSize: 16,
+    color: COLORS.text,
+    fontSize: 15,
     fontWeight: "600",
     letterSpacing: 0.3,
   },
   logoutButton: {
-    backgroundColor: "#e63946",
+    backgroundColor: COLORS.error,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 16,
-    borderRadius: 16,
-    shadowColor: "#e63946",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 6,
+    borderRadius: BORDER_RADIUS.lg,
+    ...SHADOWS.medium,
+    shadowColor: COLORS.error,
   },
   logoutText: {
     color: "#fff",
     fontSize: 16,
     fontWeight: "700",
     letterSpacing: 0.5,
+  },
+  version: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+    textAlign: "center",
+    marginTop: 20,
   },
 })

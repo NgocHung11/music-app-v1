@@ -1,138 +1,137 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-import * as SecureStore from "expo-secure-store";
-import api, { API_BASE } from "../api";
-import { setAccessToken as setAccessTokenHelper } from "./tokenHelper";
+"use client"
 
-type User = {
-  _id?: string;
-  username?: string;
-  email?: string;
-  firstName?: string;
-  lastName?: string;
-};
+import type React from "react"
+import { createContext, useContext, useEffect, useState } from "react"
+import * as SecureStore from "expo-secure-store"
+import { userApi, authApi } from "../api"
+import { setAccessToken as setAccessTokenHelper } from "./tokenHelper"
+import type { User } from "../types"
 
 type AuthContextType = {
-  user: User | null;
-  signIn: (username: string, password: string) => Promise<void>;
+  user: User | null
+  signIn: (username: string, password: string) => Promise<void>
   signUp: (payload: {
-    username: string;
-    password: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-  }) => Promise<void>;
-  signOut: () => Promise<void>;
-  loading: boolean;
-};
+    username: string
+    password: string
+    email: string
+    firstName?: string
+    lastName?: string
+  }) => Promise<void>
+  signOut: () => Promise<void>
+  updateUser: (data: Partial<User>) => void
+  refreshUser: () => Promise<void>
+  loading: boolean
+  isAuthenticated: boolean
+}
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export const useAuth = () => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used inside AuthProvider");
-  return ctx;
-};
+  const ctx = useContext(AuthContext)
+  if (!ctx) throw new Error("useAuth must be used inside AuthProvider")
+  return ctx
+}
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  // on app start: try to restore from refresh token
+  const isAuthenticated = !!user
+
+  // Khôi phục session từ refresh token khi app khởi động
   useEffect(() => {
-    (async () => {
+    ; (async () => {
       try {
-        const refreshToken = await SecureStore.getItemAsync("refreshToken");
+        const refreshToken = await SecureStore.getItemAsync("refreshToken")
         if (refreshToken) {
-          // call refresh to get access token
-          const r = await fetch(`${API_BASE}/api/auth/refresh`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ refreshToken }),
-          });
-          if (r.ok) {
-            const data = await r.json();
-            const { accessToken } = data;
-            await setAccessTokenHelper(accessToken);
-            // fetch profile
-            const me = await api.get("/users/me");
-            setUser(me.data.user ?? null);
-          } else {
-            // refresh failed -> clear refresh token
-            await SecureStore.deleteItemAsync("refreshToken");
-            setUser(null);
-            await setAccessTokenHelper(null);
+          const r = await authApi.refresh(refreshToken)
+          if (r.data.accessToken) {
+            await setAccessTokenHelper(r.data.accessToken)
+            // Fetch profile
+            const me = await userApi.getProfile()
+            setUser(me.data.user ?? null)
           }
         }
       } catch (e) {
-        console.warn("Restore session failed", e);
+        console.warn("Restore session failed", e)
+        await SecureStore.deleteItemAsync("refreshToken")
+        await setAccessTokenHelper(null)
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    })();
-  }, []);
+    })()
+  }, [])
 
   const signIn = async (username: string, password: string) => {
-    const r = await fetch(`${API_BASE}/api/auth/signin`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
-    });
-    if (!r.ok) {
-      const err = await r.json().catch(() => null);
-      throw new Error((err && err.message) || "Login failed");
+    const r = await authApi.signIn(username.trim().toLowerCase(), password)
+    if (!r.data.accessToken) {
+      throw new Error("Login failed")
     }
-    const data = await r.json();
-    const { accessToken, refreshToken } = data;
-    // save refresh token secure
-    await SecureStore.setItemAsync("refreshToken", refreshToken);
-    await setAccessTokenHelper(accessToken);
-    // fetch profile
-    const me = await api.get("/users/me");
-    setUser(me.data.user ?? null);
-  };
+    const { accessToken, refreshToken } = r.data
+    await SecureStore.setItemAsync("refreshToken", refreshToken)
+    await setAccessTokenHelper(accessToken)
+    // Fetch profile
+    const me = await userApi.getProfile()
+    setUser(me.data.user ?? null)
+  }
 
   const signUp = async (payload: {
-    username: string;
-    password: string;
-    email: string;
-    firstName: string;
-    lastName: string;
+    username: string
+    password: string
+    email: string
+    firstName?: string
+    lastName?: string
   }) => {
-    const r = await fetch(`${API_BASE}/api/auth/signup`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (!r.ok) {
-      const err = await r.json().catch(() => null);
-      throw new Error((err && err.message) || "Sign up failed");
-    }
-  
-  };
+    await authApi.signUp({
+      ...payload,
+      username: payload.username.trim().toLowerCase(),
+    })
+  }
 
   const signOut = async () => {
     try {
-      const refreshToken = await SecureStore.getItemAsync("refreshToken");
+      const refreshToken = await SecureStore.getItemAsync("refreshToken")
       if (refreshToken) {
-        await fetch(`${API_BASE}/api/auth/signout`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refreshToken }),
-        });
+        await authApi.signOut(refreshToken)
       }
     } catch (e) {
-      console.warn("signOut error", e);
+      console.warn("signOut error", e)
     } finally {
-      await SecureStore.deleteItemAsync("refreshToken");
-      setUser(null);
-      await setAccessTokenHelper(null);
+      await SecureStore.deleteItemAsync("refreshToken")
+      setUser(null)
+      await setAccessTokenHelper(null)
     }
-  };
+  }
+
+  const updateUser = (data: Partial<User>) => {
+    if (user) {
+      setUser({ ...user, ...data })
+    }
+  }
+
+  const refreshUser = async () => {
+    try {
+      const me = await userApi.getProfile()
+      setUser(me.data.user ?? null)
+    } catch (e) {
+      console.warn("refreshUser error", e)
+    }
+  }
 
   return (
-    <AuthContext.Provider value={{ user, signIn, signUp, signOut, loading }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        signIn,
+        signUp,
+        signOut,
+        updateUser,
+        refreshUser,
+        loading,
+        isAuthenticated,
+      }}
+    >
       {children}
     </AuthContext.Provider>
-  );
-};
-
+  )
+}

@@ -7,7 +7,8 @@ import { SafeAreaView } from "react-native-safe-area-context"
 import { useNavigation } from "@react-navigation/native"
 import { LinearGradient } from "expo-linear-gradient"
 import api from "../api"
-import SongItem, { type Song } from "../components/SongItem"
+import SongItem from "../components/SongItem"
+import type { Song } from "../types"
 import { usePlayer } from "../context/PlayerContext"
 
 export default function SongsScreen() {
@@ -15,7 +16,7 @@ export default function SongsScreen() {
   const [loading, setLoading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
 
-  const { setQueue } = usePlayer()
+  const { playSongs } = usePlayer()
   const navigation = useNavigation<any>()
 
   const fetchSongs = async () => {
@@ -69,7 +70,7 @@ export default function SongsScreen() {
           <FlatList
             data={songs}
             keyExtractor={(item) => item._id}
-            renderItem={({ item, index }) => <SongItem song={item} onPress={() => setQueue(songs, index)} />}
+            renderItem={({ item, index }) => <SongItem song={item} onPress={() => playSongs(songs, index)} />}
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4a5fd9" colors={["#4a5fd9"]} />
             }
