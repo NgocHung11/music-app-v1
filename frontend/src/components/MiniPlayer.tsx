@@ -1,21 +1,56 @@
+"use client"
+
 import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native"
 import { usePlayer } from "../context/PlayerContext"
-import { useNavigation } from "@react-navigation/native"
+import { useNavigation, useNavigationState } from "@react-navigation/native"
 import { Ionicons } from "@expo/vector-icons"
 import { LinearGradient } from "expo-linear-gradient"
+import { useState, useEffect } from "react"
+
+const PLACEHOLDER_IMAGE = "https://via.placeholder.com/300x300.png?text=No+Cover"
+
+const getCurrentTabName = (state: any): string | null => {
+  if (!state) return null
+  const route = state.routes?.[state.index]
+  return route?.name || null
+}
 
 export default function MiniPlayer() {
   const { currentSong, isPlaying, togglePlay, nextSong, prevSong } = usePlayer()
   const navigation = useNavigation<any>()
+  const [imageError, setImageError] = useState(false)
 
-  if (!currentSong) return null
+  const navState = useNavigationState((state) => state)
+
+  const currentTabName = getCurrentTabName(navState)
+
+  useEffect(() => {
+    setImageError(false)
+  }, [currentSong?._id])
+
+  if (!currentSong || currentTabName === "Player") {
+    return null
+  }
+
+  const getImageSource = (): string => {
+    if (imageError) return PLACEHOLDER_IMAGE
+    if (currentSong.coverUrl) return currentSong.coverUrl
+
+    const artist = currentSong.artist
+    if (artist && typeof artist === "object") {
+      if ((artist as any).avatarUrl) return (artist as any).avatarUrl
+      if ((artist as any).avatar) return (artist as any).avatar
+    }
+
+    return PLACEHOLDER_IMAGE
+  }
+
+  const imageSource = getImageSource()
+
+  const artistName = typeof currentSong.artist === "object" ? (currentSong.artist as any)?.name : currentSong.artist
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.95}
-      onPress={() => navigation.navigate("MainTabs", { screen: "Explore" })}
-      style={styles.container}
-    >
+    <TouchableOpacity activeOpacity={0.95} onPress={() => navigation.navigate("Player")} style={styles.container}>
       <LinearGradient
         colors={["#1a1a2e", "#16213e"]}
         start={{ x: 0, y: 0 }}
@@ -23,7 +58,7 @@ export default function MiniPlayer() {
         style={styles.gradient}
       >
         <View style={styles.coverWrapper}>
-          <Image source={{ uri: currentSong.coverUrl }} style={styles.cover} />
+          <Image source={{ uri: imageSource }} style={styles.cover} onError={() => setImageError(true)} />
         </View>
 
         <View style={styles.songInfo}>
@@ -31,7 +66,7 @@ export default function MiniPlayer() {
             {currentSong.title}
           </Text>
           <Text style={styles.artist} numberOfLines={1}>
-            {currentSong.artist}
+            {artistName || "Unknown Artist"}
           </Text>
         </View>
 
@@ -74,10 +109,9 @@ export default function MiniPlayer() {
 const styles = StyleSheet.create({
   container: {
     position: "absolute",
-    bottom: 60,
     left: 12,
     right: 12,
-    marginBottom: 12,
+    bottom: 70,
     borderRadius: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
@@ -85,6 +119,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 16,
     overflow: "hidden",
+    zIndex: 999,
   },
   gradient: {
     flexDirection: "row",

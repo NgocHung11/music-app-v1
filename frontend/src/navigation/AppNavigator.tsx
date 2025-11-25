@@ -1,32 +1,17 @@
 "use client"
 import { NavigationContainer } from "@react-navigation/native"
-import { createNativeStackNavigator } from "@react-navigation/native-stack"
 import { useAuth } from "../context/AuthContext"
 import { ActivityIndicator, View } from "react-native"
 import { COLORS } from "../constants/theme"
+import { createNativeStackNavigator } from "@react-navigation/native-stack"
 
 // Auth Screens
 import SignInScreen from "../screens/SignInScreen"
 import SignUpScreen from "../screens/SignUpScreen"
 
-// Main Tabs
+// Main Tabs with MiniPlayer
 import MainTabs from "./MainTabs"
-
-// Detail Screens
-import SearchScreen from "../screens/SearchScreen"
-import AlbumScreen from "../screens/AlbumScreen"
-import ArtistScreen from "../screens/ArtistScreen"
-import GenreScreen from "../screens/GenreScreen"
-import PlaylistScreen from "../screens/PlaylistScreen"
-import HistoryScreen from "../screens/HistoryScreen"
-import LikedSongsScreen from "../screens/LikedSongsScreen"
-import EditProfileScreen from "../screens/EditProfileScreen"
-
-import AlbumsScreen from "../screens/AlbumsScreen"
-import ArtistsScreen from "../screens/ArtistsScreen"
-import TopSongsScreen from "../screens/TopSongsScreen"
-import ArtistSongsScreen from "../screens/ArtistSongsScreen"
-import ArtistAlbumsScreen from "../screens/ArtistAlbumsScreen"
+import MiniPlayer from "../components/MiniPlayer"
 
 const Stack = createNativeStackNavigator()
 
@@ -41,22 +26,10 @@ function AuthStack() {
 
 function MainStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="MainTabs" component={MainTabs} />
-      <Stack.Screen name="Search" component={SearchScreen} />
-      <Stack.Screen name="Album" component={AlbumScreen} />
-      <Stack.Screen name="Artist" component={ArtistScreen} />
-      <Stack.Screen name="Genre" component={GenreScreen} />
-      <Stack.Screen name="Playlist" component={PlaylistScreen} />
-      <Stack.Screen name="History" component={HistoryScreen} />
-      <Stack.Screen name="LikedSongs" component={LikedSongsScreen} />
-      <Stack.Screen name="EditProfile" component={EditProfileScreen} />
-      <Stack.Screen name="Albums" component={AlbumsScreen} />
-      <Stack.Screen name="Artists" component={ArtistsScreen} />
-      <Stack.Screen name="TopSongs" component={TopSongsScreen} />
-      <Stack.Screen name="ArtistSongs" component={ArtistSongsScreen} />
-      <Stack.Screen name="ArtistAlbums" component={ArtistAlbumsScreen} />
-    </Stack.Navigator>
+    <View style={{ flex: 1 }}>
+      <MainTabs />
+      <MiniPlayer />
+    </View>
   )
 }
 

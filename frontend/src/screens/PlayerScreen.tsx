@@ -1,4 +1,6 @@
-import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions } from "react-native"
+"use client"
+
+import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator } from "react-native"
 import { usePlayer } from "../context/PlayerContext"
 import { useFavorite } from "../hooks/useFavorite"
 import { Ionicons } from "@expo/vector-icons"
@@ -6,14 +8,18 @@ import { LinearGradient } from "expo-linear-gradient"
 import { useNavigation } from "@react-navigation/native"
 import ProgressBar from "../components/ProgressBar"
 import { COLORS, GRADIENTS, BORDER_RADIUS, SHADOWS } from "../constants/theme"
+import { useState } from "react"
 
 const { width } = Dimensions.get("window")
+
+const PLACEHOLDER_IMAGE = "https://via.placeholder.com/300x300.png?text=No+Cover"
 
 export default function PlayerScreen() {
   const navigation = useNavigation<any>()
   const {
     currentSong,
     isPlaying,
+    isLoading,
     positionMillis,
     durationMillis,
     shuffle,
@@ -26,6 +32,7 @@ export default function PlayerScreen() {
   } = usePlayer()
 
   const { isFavorite, toggleFavorite } = useFavorite("song", currentSong?._id || "")
+  const [imageError, setImageError] = useState(false)
 
   if (!currentSong) {
     return (
@@ -45,6 +52,9 @@ export default function PlayerScreen() {
     return "repeat"
   }
 
+  const coverUrl = currentSong.coverUrl || PLACEHOLDER_IMAGE
+  const imageSource = imageError ? PLACEHOLDER_IMAGE : coverUrl
+
   return (
     <LinearGradient colors={GRADIENTS.background} style={styles.container}>
       {/* Header */}
@@ -61,7 +71,12 @@ export default function PlayerScreen() {
       {/* Cover Art */}
       <View style={styles.coverContainer}>
         <View style={styles.coverWrapper}>
-          <Image source={{ uri: currentSong.coverUrl }} style={styles.cover} />
+          <Image source={{ uri: imageSource }} style={styles.cover} onError={() => setImageError(true)} />
+          {isLoading && (
+            <View style={styles.coverLoadingOverlay}>
+              <ActivityIndicator size="large" color={COLORS.primary} />
+            </View>
+          )}
         </View>
       </View>
 
@@ -97,18 +112,22 @@ export default function PlayerScreen() {
           <Ionicons name="shuffle" size={24} color={shuffle ? COLORS.primary : COLORS.textSecondary} />
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={prevSong} style={styles.controlBtn}>
-          <Ionicons name="play-skip-back" size={32} color="#fff" />
+        <TouchableOpacity onPress={prevSong} style={styles.controlBtn} disabled={isLoading}>
+          <Ionicons name="play-skip-back" size={32} color={isLoading ? COLORS.textMuted : "#fff"} />
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={togglePlay} style={styles.playBtn}>
+        <TouchableOpacity onPress={togglePlay} style={styles.playBtn} disabled={isLoading}>
           <LinearGradient colors={GRADIENTS.primary} style={styles.playBtnGradient}>
-            <Ionicons name={isPlaying ? "pause" : "play"} size={36} color="#fff" />
+            {isLoading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Ionicons name={isPlaying ? "pause" : "play"} size={36} color="#fff" />
+            )}
           </LinearGradient>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={nextSong} style={styles.controlBtn}>
-          <Ionicons name="play-skip-forward" size={32} color="#fff" />
+        <TouchableOpacity onPress={nextSong} style={styles.controlBtn} disabled={isLoading}>
+          <Ionicons name="play-skip-forward" size={32} color={isLoading ? COLORS.textMuted : "#fff"} />
         </TouchableOpacity>
 
         <TouchableOpacity onPress={toggleRepeat} style={styles.secondaryBtn}>
@@ -202,12 +221,24 @@ const styles = StyleSheet.create({
     ...SHADOWS.large,
     shadowColor: COLORS.primary,
     borderRadius: BORDER_RADIUS.xl,
+    position: "relative",
   },
   cover: {
     width: width - 80,
     height: width - 80,
     borderRadius: BORDER_RADIUS.xl,
     backgroundColor: COLORS.backgroundLight,
+  },
+  coverLoadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    borderRadius: BORDER_RADIUS.xl,
+    justifyContent: "center",
+    alignItems: "center",
   },
   infoContainer: {
     marginBottom: 24,

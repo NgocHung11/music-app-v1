@@ -3,6 +3,7 @@ import { protectedRoute, adminRoute } from "../middlewares/authMiddleware.js"
 import {
   getAlbums,
   getAlbumById,
+  getAlbumSongs,
   getNewAlbums,
   createAlbum,
   updateAlbum,
@@ -15,6 +16,7 @@ const router = express.Router()
 router.get("/", getAlbums)
 router.get("/new", getNewAlbums)
 router.get("/:id", getAlbumById)
+router.get("/:id/songs", getAlbumSongs)
 
 // ADMIN ROUTES
 router.post("/", protectedRoute, adminRoute, createAlbum)

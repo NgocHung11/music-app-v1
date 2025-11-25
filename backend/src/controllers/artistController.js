@@ -133,3 +133,57 @@ export const deleteArtist = async (req, res) => {
     res.status(500).json({ message: "Lỗi server", error: error.message })
   }
 }
+
+// Lấy danh sách bài hát của nghệ sĩ
+export const getArtistSongs = async (req, res) => {
+  try {
+    const { page = 1, limit = 20 } = req.query
+    const skip = (Number.parseInt(page) - 1) * Number.parseInt(limit)
+
+    const artist = await Artist.findById(req.params.id)
+    if (!artist) {
+      return res.status(404).json({ message: "Không tìm thấy nghệ sĩ" })
+    }
+
+    const songs = await Song.find({ artist: req.params.id, isPublished: true })
+      .populate("artist", "name avatarUrl")
+      .populate("album", "title coverUrl")
+      .sort({ playCount: -1 })
+      .skip(skip)
+      .limit(Number.parseInt(limit))
+
+    const total = await Song.countDocuments({ artist: req.params.id, isPublished: true })
+
+    res.status(200).json({
+      songs,
+      pagination: {
+        page: Number.parseInt(page),
+        limit: Number.parseInt(limit),
+        total,
+        totalPages: Math.ceil(total / Number.parseInt(limit)),
+      },
+    })
+  } catch (error) {
+    console.error("getArtistSongs error:", error)
+    res.status(500).json({ message: "Lỗi server", error: error.message })
+  }
+}
+
+// Lấy danh sách albums của nghệ sĩ
+export const getArtistAlbums = async (req, res) => {
+  try {
+    const artist = await Artist.findById(req.params.id)
+    if (!artist) {
+      return res.status(404).json({ message: "Không tìm thấy nghệ sĩ" })
+    }
+
+    const albums = await Album.find({ artist: req.params.id, isPublished: true })
+      .populate("artist", "name avatarUrl")
+      .sort({ releaseDate: -1 })
+
+    res.status(200).json({ albums })
+  } catch (error) {
+    console.error("getArtistAlbums error:", error)
+    res.status(500).json({ message: "Lỗi server", error: error.message })
+  }
+}

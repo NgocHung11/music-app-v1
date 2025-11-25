@@ -16,6 +16,7 @@ const router = express.Router()
 // PUBLIC ROUTES
 router.get("/", getSongs)
 router.get("/top", getTopSongs)
+router.get("/top/:period", getTopSongs)
 router.get("/new", getNewReleases)
 router.get("/:id", getSongById)
 

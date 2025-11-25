@@ -1,9 +1,13 @@
+"use client"
+
 import type React from "react"
-import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native"
+import { View, Text, Image, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { COLORS, BORDER_RADIUS, SHADOWS } from "../constants/theme"
 import type { Song } from "../types"
 import { getArtistName, getCoverImage } from "../types"
+import { usePlayer } from "../context/PlayerContext"
+import { useState } from "react"
 
 type Props = {
   song: Song
@@ -13,7 +17,15 @@ type Props = {
   index?: number
 }
 
+const PLACEHOLDER_IMAGE = "https://via.placeholder.com/300x300.png?text=No+Cover"
+
 const SongItem: React.FC<Props> = ({ song, onPress, showMenu = true, onMenuPress, index }) => {
+  const { currentSong, isPlaying, isLoading } = usePlayer()
+  const [imageError, setImageError] = useState(false)
+
+  const isCurrentSong = currentSong?._id === song._id
+  const isThisSongLoading = isCurrentSong && isLoading
+
   const formatDuration = (seconds?: number) => {
     if (!seconds) return "--:--"
     const m = Math.floor(seconds / 60)
@@ -21,14 +33,37 @@ const SongItem: React.FC<Props> = ({ song, onPress, showMenu = true, onMenuPress
     return `${m}:${s.toString().padStart(2, "0")}`
   }
 
+  const coverImageUrl = getCoverImage(song)
+  const imageSource = imageError ? PLACEHOLDER_IMAGE : coverImageUrl
+
   return (
-    <TouchableOpacity style={styles.item} onPress={onPress} activeOpacity={0.7}>
-      {index !== undefined && <Text style={styles.index}>{index + 1}</Text>}
+    <TouchableOpacity
+      style={[styles.item, isCurrentSong && styles.itemActive]}
+      onPress={onPress}
+      activeOpacity={0.7}
+      disabled={isLoading}
+    >
+      {index !== undefined && <Text style={[styles.index, isCurrentSong && styles.indexActive]}>{index + 1}</Text>}
       <View style={styles.coverWrapper}>
-        <Image source={{ uri: getCoverImage(song) }} style={styles.cover} />
+        <Image
+          source={{ uri: imageSource }}
+          style={styles.cover}
+          onError={() => setImageError(true)}
+          defaultSource={{ uri: PLACEHOLDER_IMAGE }}
+        />
+        {isThisSongLoading && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="small" color={COLORS.primary} />
+          </View>
+        )}
+        {isCurrentSong && isPlaying && !isThisSongLoading && (
+          <View style={styles.playingOverlay}>
+            <Ionicons name="musical-notes" size={20} color={COLORS.primary} />
+          </View>
+        )}
       </View>
       <View style={styles.meta}>
-        <Text numberOfLines={1} style={styles.title}>
+        <Text numberOfLines={1} style={[styles.title, isCurrentSong && styles.titleActive]}>
           {song.title}
         </Text>
         <View style={styles.subtitleRow}>
@@ -61,6 +96,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.borderLight,
   },
+  itemActive: {
+    backgroundColor: COLORS.primaryLight || "rgba(99, 102, 241, 0.1)",
+    borderColor: COLORS.primary,
+  },
   index: {
     color: COLORS.textSecondary,
     fontSize: 14,
@@ -68,15 +107,41 @@ const styles = StyleSheet.create({
     width: 24,
     textAlign: "center",
   },
+  indexActive: {
+    color: COLORS.primary,
+  },
   coverWrapper: {
     ...SHADOWS.small,
     borderRadius: 10,
+    position: "relative",
   },
   cover: {
     width: 56,
     height: 56,
     borderRadius: 10,
     backgroundColor: COLORS.backgroundLight,
+  },
+  loadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  playingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
   },
   meta: {
     flex: 1,
@@ -87,6 +152,9 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: COLORS.text,
     letterSpacing: 0.3,
+  },
+  titleActive: {
+    color: COLORS.primary,
   },
   subtitleRow: {
     flexDirection: "row",
