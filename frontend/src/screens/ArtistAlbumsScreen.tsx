@@ -1,5 +1,3 @@
-"use client"
-
 import { useEffect, useState, useCallback } from "react"
 import { View, Text, FlatList, RefreshControl, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native"
 import { Ionicons } from "@expo/vector-icons"

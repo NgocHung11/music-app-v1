@@ -37,7 +37,7 @@ export default function GenreScreen() {
   const [albums, setAlbums] = useState<Album[]>([])
   const [loading, setLoading] = useState(true)
 
-  const { playSongs } = usePlayer()
+  const { playSongs, isPlaying, currentSong, togglePlay } = usePlayer()
 
   const colors = GENRE_COLORS[genre?.name?.toLowerCase().replace(/[^a-z]/g, "")] || GENRE_COLORS.default
 
@@ -60,8 +60,17 @@ export default function GenreScreen() {
     fetchGenreData()
   }, [genre?._id])
 
+  const isGenreSongsPlaying = () => {
+    if (!currentSong || songs.length === 0) return false
+    const genreSongIds = songs.map((s) => s._id)
+    return genreSongIds.includes(currentSong._id)
+  }
+
   const handlePlayAll = () => {
-    if (songs.length > 0) {
+    if (songs.length === 0) return
+    if (isGenreSongsPlaying()) {
+      togglePlay()
+    } else {
       playSongs(songs, 0)
     }
   }
@@ -74,6 +83,8 @@ export default function GenreScreen() {
     )
   }
 
+  const showPauseIcon = isGenreSongsPlaying() && isPlaying
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
@@ -84,8 +95,8 @@ export default function GenreScreen() {
         <Text style={styles.title}>{genre.name}</Text>
         {genre.description && <Text style={styles.description}>{genre.description}</Text>}
         <TouchableOpacity style={styles.playAllBtn} onPress={handlePlayAll}>
-          <Ionicons name="play" size={20} color={colors[0]} />
-          <Text style={[styles.playAllText, { color: colors[0] }]}>Play All</Text>
+          <Ionicons name={showPauseIcon ? "pause" : "play"} size={20} color={colors[0]} />
+          <Text style={[styles.playAllText, { color: colors[0] }]}>{showPauseIcon ? "Pause" : "Play All"}</Text>
         </TouchableOpacity>
       </LinearGradient>
 

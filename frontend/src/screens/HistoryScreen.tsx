@@ -13,7 +13,7 @@ import { COLORS, BORDER_RADIUS } from "../constants/theme"
 
 export default function HistoryScreen() {
   const navigation = useNavigation<any>()
-  const { playSongs } = usePlayer()
+  const { playSongs, isPlaying, currentSong, togglePlay } = usePlayer()
 
   const [history, setHistory] = useState<PlayHistory[]>([])
   const [loading, setLoading] = useState(true)
@@ -64,6 +64,10 @@ export default function HistoryScreen() {
     return date.toLocaleDateString()
   }
 
+  const isSongPlaying = (songId: string) => {
+    return currentSong?._id === songId && isPlaying
+  }
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -94,11 +98,21 @@ export default function HistoryScreen() {
         renderItem={({ item, index }) => {
           const song = item.song as Song
           if (!song || typeof song === "string") return null
+          const isThisSongPlaying = isSongPlaying(song._id)
           return (
-            <TouchableOpacity style={styles.historyItem} onPress={() => playSongs(songs, index)}>
+            <TouchableOpacity
+              style={styles.historyItem}
+              onPress={() => {
+                if (currentSong?._id === song._id) {
+                  togglePlay()
+                } else {
+                  playSongs(songs, index)
+                }
+              }}
+            >
               <Image source={{ uri: getCoverImage(song) }} style={styles.cover} />
               <View style={styles.info}>
-                <Text style={styles.title} numberOfLines={1}>
+                <Text style={[styles.title, isThisSongPlaying && styles.titlePlaying]} numberOfLines={1}>
                   {song.title}
                 </Text>
                 <Text style={styles.artist} numberOfLines={1}>
@@ -106,7 +120,11 @@ export default function HistoryScreen() {
                 </Text>
                 <Text style={styles.date}>{formatDate(item.playedAt)}</Text>
               </View>
-              <Ionicons name="play-circle-outline" size={24} color={COLORS.primary} />
+              <Ionicons
+                name={isThisSongPlaying ? "pause-circle" : "play-circle-outline"}
+                size={24}
+                color={isThisSongPlaying ? COLORS.primary : COLORS.primary}
+              />
             </TouchableOpacity>
           )
         }}
@@ -179,6 +197,9 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontSize: 15,
     fontWeight: "600",
+  },
+  titlePlaying: {
+    color: COLORS.primary,
   },
   artist: {
     color: COLORS.textSecondary,

@@ -10,13 +10,14 @@ import api from "../api"
 import SongItem from "../components/SongItem"
 import type { Song } from "../types"
 import { usePlayer } from "../context/PlayerContext"
+import { COLORS } from "../constants/theme"
 
 export default function SongsScreen() {
   const [songs, setSongs] = useState<Song[]>([])
   const [loading, setLoading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
 
-  const { playSongs } = usePlayer()
+  const { playSongs, isPlaying, currentSong, togglePlay } = usePlayer()
   const navigation = useNavigation<any>()
 
   const fetchSongs = async () => {
@@ -41,6 +42,23 @@ export default function SongsScreen() {
     setRefreshing(false)
   }
 
+  const isSongsListPlaying = () => {
+    if (!currentSong || songs.length === 0) return false
+    return songs.some((s) => s._id === currentSong._id)
+  }
+
+  const handlePlayAll = () => {
+    if (songs.length === 0) return
+    if (isSongsListPlaying()) {
+      togglePlay()
+    } else {
+      playSongs(songs, 0)
+    }
+  }
+
+  const isThisListPlaying = isSongsListPlaying()
+  const showPauseIcon = isThisListPlaying && isPlaying
+
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
       <LinearGradient
@@ -55,9 +73,16 @@ export default function SongsScreen() {
             <Text style={styles.title}>Discover & Play</Text>
           </View>
 
-          <TouchableOpacity onPress={() => navigation.navigate("Search")} style={styles.searchBtn}>
-            <Ionicons name="search" size={22} color="#fff" />
-          </TouchableOpacity>
+          <View style={styles.headerButtons}>
+            {songs.length > 0 && (
+              <TouchableOpacity onPress={handlePlayAll} style={styles.playAllBtn}>
+                <Ionicons name={showPauseIcon ? "pause" : "play"} size={20} color="#fff" />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity onPress={() => navigation.navigate("Search")} style={styles.searchBtn}>
+              <Ionicons name="search" size={22} color="#fff" />
+            </TouchableOpacity>
+          </View>
         </View>
       </LinearGradient>
 
@@ -118,6 +143,24 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "800",
     letterSpacing: 0.5,
+  },
+  headerButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  playAllBtn: {
+    backgroundColor: COLORS.primary,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#4a5fd9",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 8,
   },
   searchBtn: {
     backgroundColor: "#4a5fd9",

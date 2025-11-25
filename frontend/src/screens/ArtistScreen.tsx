@@ -31,25 +31,31 @@ const { width } = Dimensions.get("window")
 export default function ArtistScreen() {
   const navigation = useNavigation<any>()
   const route = useRoute<any>()
-  const { artist: initialArtist } = route.params || {}
+  const { artist: initialArtist, artistId } = route.params || {}
 
-  const [artist, setArtist] = useState<Artist | null>(initialArtist)
+  const [artist, setArtist] = useState<Artist | null>(initialArtist || null)
   const [songs, setSongs] = useState<Song[]>([])
   const [albums, setAlbums] = useState<Album[]>([])
   const [loading, setLoading] = useState(true)
   const [imageError, setImageError] = useState(false)
 
-  const { playSongs } = usePlayer()
-  const { isFavorite, toggleFavorite, loading: favLoading } = useFavorite("artist", artist?._id || "")
+  const { playSongs, isPlaying, currentSong, togglePlay, songList } = usePlayer()
+  const currentArtistId = artist?._id || artistId || ""
+  const { isFavorite, toggleFavorite, loading: favLoading } = useFavorite("artist", currentArtistId)
 
   useEffect(() => {
     const fetchArtistData = async () => {
-      if (!artist?._id) return
+      const idToFetch = initialArtist?._id || artistId
+      if (!idToFetch) {
+        setLoading(false)
+        return
+      }
+
       try {
         const [artistRes, songsRes, albumsRes] = await Promise.all([
-          artistApi.getById(artist._id),
-          artistApi.getSongs(artist._id, { limit: 10 }),
-          artistApi.getAlbums(artist._id),
+          artistApi.getById(idToFetch),
+          artistApi.getSongs(idToFetch, { limit: 10 }),
+          artistApi.getAlbums(idToFetch),
         ])
         setArtist(artistRes.data.artist)
         setSongs(songsRes.data.songs ?? [])
@@ -61,10 +67,21 @@ export default function ArtistScreen() {
       }
     }
     fetchArtistData()
-  }, [artist?._id])
+  }, [initialArtist?._id, artistId])
+
+  const isCurrentArtistPlaying = () => {
+    if (!currentSong || songs.length === 0) return false
+    return songs.some((s) => s._id === currentSong._id)
+  }
+
+  const isThisArtistPlaying = isCurrentArtistPlaying()
+  const showPauseIcon = isThisArtistPlaying && isPlaying
 
   const handlePlayAll = () => {
-    if (songs.length > 0) {
+    if (songs.length === 0) return
+    if (isThisArtistPlaying) {
+      togglePlay()
+    } else {
       playSongs(songs, 0)
     }
   }
@@ -149,8 +166,8 @@ export default function ArtistScreen() {
 
           <TouchableOpacity style={styles.playBtn} onPress={handlePlayAll}>
             <LinearGradient colors={GRADIENTS.primary} style={styles.playBtnGradient}>
-              <Ionicons name="play" size={24} color="#fff" />
-              <Text style={styles.playBtnText}>Play</Text>
+              <Ionicons name={showPauseIcon ? "pause" : "play"} size={24} color="#fff" />
+              <Text style={styles.playBtnText}>{showPauseIcon ? "Pause" : "Play"}</Text>
             </LinearGradient>
           </TouchableOpacity>
 
