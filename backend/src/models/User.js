@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose from "mongoose"
 
 const userSchema = new mongoose.Schema(
   {
@@ -26,24 +26,37 @@ const userSchema = new mongoose.Schema(
       trim: true,
     },
     avatarUrl: {
-      type: String, // link CDN để hiển thị hình
+      type: String,
+      default: null,
     },
     avatarId: {
-      type: String, // Cloudinary public_id để xoá hình
+      type: String,
+      default: null,
     },
     bio: {
       type: String,
-      maxlength: 500, // tuỳ
+      maxlength: 500,
+      default: "",
     },
     phone: {
       type: String,
-      sparse: true, // cho phép null, nhưng không được trùng
+      sparse: true,
+      default: null,
+    },
+    role: {
+      type: String,
+      enum: ["user", "admin"],
+      default: "user",
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
     },
   },
   {
     timestamps: true,
-  }
-);
+  },
+)
 
-const User = mongoose.model("User", userSchema);
-export default User;
+const User = mongoose.model("User", userSchema)
+export default User
