@@ -15,11 +15,25 @@ type Props = {
   showMenu?: boolean
   onMenuPress?: () => void
   index?: number
+  onLongPress?: () => void
+  showHeart?: boolean
+  isFavorite?: boolean
+  onHeartPress?: () => void
 }
 
 const PLACEHOLDER_IMAGE = "https://via.placeholder.com/300x300.png?text=No+Cover"
 
-const SongItem: React.FC<Props> = ({ song, onPress, showMenu = true, onMenuPress, index }) => {
+const SongItem: React.FC<Props> = ({
+  song,
+  onPress,
+  showMenu = true,
+  onMenuPress,
+  index,
+  onLongPress,
+  showHeart = false,
+  isFavorite = false,
+  onHeartPress,
+}) => {
   const { currentSong, isPlaying, isLoading } = usePlayer()
   const [imageError, setImageError] = useState(false)
 
@@ -44,6 +58,7 @@ const SongItem: React.FC<Props> = ({ song, onPress, showMenu = true, onMenuPress
     <TouchableOpacity
       style={[styles.item, isCurrentSong && styles.itemActive]}
       onPress={onPress}
+      onLongPress={onLongPress}
       activeOpacity={0.7}
       disabled={isLoading}
     >
@@ -78,7 +93,20 @@ const SongItem: React.FC<Props> = ({ song, onPress, showMenu = true, onMenuPress
           <Text style={styles.duration}>{formatDuration(song.duration)}</Text>
         </View>
       </View>
-      {showMenu && (
+      {showHeart && (
+        <TouchableOpacity
+          onPress={onHeartPress}
+          style={styles.heartBtn}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons
+            name={isFavorite ? "heart" : "heart-outline"}
+            size={22}
+            color={isFavorite ? COLORS.error : COLORS.textSecondary}
+          />
+        </TouchableOpacity>
+      )}
+      {!showHeart && showMenu && (
         <TouchableOpacity onPress={onMenuPress} style={styles.menuBtn}>
           <Ionicons name="ellipsis-vertical" size={20} color={COLORS.textSecondary} />
         </TouchableOpacity>
@@ -180,6 +208,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   menuBtn: {
+    padding: 8,
+  },
+  heartBtn: {
     padding: 8,
   },
 })

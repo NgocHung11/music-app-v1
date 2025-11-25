@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native"
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from "react-native"
 import { LinearGradient } from "expo-linear-gradient"
 import { Ionicons } from "@expo/vector-icons"
 import { SafeAreaView } from "react-native-safe-area-context"
@@ -32,6 +32,25 @@ export default function LikedSongsScreen() {
     }
     fetchLikedSongs()
   }, [])
+
+  const handleRemoveFavorite = (song: Song) => {
+    Alert.alert("Remove from Liked Songs", `Are you sure you want to remove "${song.title}" from your liked songs?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Remove",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await favoriteApi.remove("song", song._id)
+            setSongs((prev) => prev.filter((s) => s._id !== song._id))
+          } catch (error) {
+            console.warn("Remove favorite error", error)
+            Alert.alert("Error", "Failed to remove song from favorites")
+          }
+        },
+      },
+    ])
+  }
 
   const handlePlayAll = () => {
     if (songs.length > 0) {
@@ -88,7 +107,17 @@ export default function LikedSongsScreen() {
             )}
           </View>
         }
-        renderItem={({ item, index }) => <SongItem song={item} index={index} onPress={() => playSongs(songs, index)} />}
+        renderItem={({ item, index }) => (
+          <SongItem
+            song={item}
+            index={index}
+            onPress={() => playSongs(songs, index)}
+            onLongPress={() => handleRemoveFavorite(item)}
+            showHeart={true}
+            isFavorite={true}
+            onHeartPress={() => handleRemoveFavorite(item)}
+          />
+        )}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="heart-outline" size={64} color={COLORS.textMuted} />

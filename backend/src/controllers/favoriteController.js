@@ -82,7 +82,7 @@ export const addFavorite = async (req, res) => {
 // Xóa khỏi yêu thích
 export const removeFavorite = async (req, res) => {
   try {
-    const { itemType, itemId } = req.body
+    const { itemType, itemId } = req.params
 
     const result = await Favorite.findOneAndDelete({
       user: req.user._id,
@@ -104,7 +104,7 @@ export const removeFavorite = async (req, res) => {
 // Kiểm tra item có trong yêu thích không
 export const checkFavorite = async (req, res) => {
   try {
-    const { itemType, itemId } = req.query
+    const { itemType, itemId } = req.params
 
     const favorite = await Favorite.findOne({
       user: req.user._id,
@@ -115,6 +115,63 @@ export const checkFavorite = async (req, res) => {
     res.status(200).json({ isFavorite: !!favorite })
   } catch (error) {
     console.error("checkFavorite error:", error)
+    res.status(500).json({ message: "Lỗi server", error: error.message })
+  }
+}
+
+// Lấy danh sách bài hát yêu thích
+export const getLikedSongs = async (req, res) => {
+  try {
+    const favorites = await Favorite.find({
+      user: req.user._id,
+      itemType: "song",
+    })
+      .populate({
+        path: "itemId",
+        populate: { path: "artist", select: "name avatarUrl" },
+      })
+      .sort({ createdAt: -1 })
+
+    const songs = favorites.map((fav) => fav.itemId).filter(Boolean)
+    res.status(200).json({ songs })
+  } catch (error) {
+    console.error("getLikedSongs error:", error)
+    res.status(500).json({ message: "Lỗi server", error: error.message })
+  }
+}
+
+// Lấy danh sách album yêu thích
+export const getLikedAlbums = async (req, res) => {
+  try {
+    const favorites = await Favorite.find({
+      user: req.user._id,
+      itemType: "album",
+    })
+      .populate("itemId")
+      .sort({ createdAt: -1 })
+
+    const albums = favorites.map((fav) => fav.itemId).filter(Boolean)
+    res.status(200).json({ albums })
+  } catch (error) {
+    console.error("getLikedAlbums error:", error)
+    res.status(500).json({ message: "Lỗi server", error: error.message })
+  }
+}
+
+// Lấy danh sách nghệ sĩ yêu thích
+export const getLikedArtists = async (req, res) => {
+  try {
+    const favorites = await Favorite.find({
+      user: req.user._id,
+      itemType: "artist",
+    })
+      .populate("itemId")
+      .sort({ createdAt: -1 })
+
+    const artists = favorites.map((fav) => fav.itemId).filter(Boolean)
+    res.status(200).json({ artists })
+  } catch (error) {
+    console.error("getLikedArtists error:", error)
     res.status(500).json({ message: "Lỗi server", error: error.message })
   }
 }

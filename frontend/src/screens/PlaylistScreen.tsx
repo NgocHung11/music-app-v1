@@ -1,3 +1,5 @@
+"use client"
+
 import { useState, useCallback } from "react"
 import {
   View,
@@ -9,6 +11,7 @@ import {
   ActivityIndicator,
   Alert,
   Dimensions,
+  Modal,
 } from "react-native"
 import { LinearGradient } from "expo-linear-gradient"
 import { Ionicons } from "@expo/vector-icons"
@@ -32,6 +35,7 @@ export default function PlaylistScreen() {
   const [playlist, setPlaylist] = useState<Playlist | null>(null)
   const [songs, setSongs] = useState<Song[]>([])
   const [loading, setLoading] = useState(true)
+  const [menuVisible, setMenuVisible] = useState(false)
 
   const {
     playSongs,
@@ -171,6 +175,35 @@ export default function PlaylistScreen() {
     ])
   }
 
+  const handleDeletePlaylist = () => {
+    setMenuVisible(false)
+    Alert.alert(
+      "Delete Playlist",
+      `Are you sure you want to delete "${playlist?.name}"? This action cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await playlistApi.delete(playlistId)
+              navigation.goBack()
+            } catch (error) {
+              console.warn("Delete playlist error", error)
+              Alert.alert("Error", "Failed to delete playlist")
+            }
+          },
+        },
+      ],
+    )
+  }
+
+  const handleEditPlaylist = () => {
+    setMenuVisible(false)
+    navigation.navigate("EditPlaylist", { playlistId, playlist })
+  }
+
   const formatDuration = (seconds: number) => {
     const hours = Math.floor(seconds / 3600)
     const minutes = Math.floor((seconds % 3600) / 60)
@@ -205,7 +238,7 @@ export default function PlaylistScreen() {
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.menuBtn}>
+          <TouchableOpacity style={styles.menuBtn} onPress={() => setMenuVisible(true)}>
             <Ionicons name="ellipsis-horizontal" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
@@ -278,6 +311,36 @@ export default function PlaylistScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* Menu Modal */}
+      <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={() => setMenuVisible(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setMenuVisible(false)}>
+          <View style={styles.menuContainer}>
+            <TouchableOpacity style={styles.menuItem} onPress={handleEditPlaylist}>
+              <Ionicons name="pencil" size={22} color={COLORS.text} />
+              <Text style={styles.menuItemText}>Edit Playlist</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setMenuVisible(false)
+                navigation.navigate("AddSongs", { playlistId })
+              }}
+            >
+              <Ionicons name="add-circle-outline" size={22} color={COLORS.text} />
+              <Text style={styles.menuItemText}>Add Songs</Text>
+            </TouchableOpacity>
+
+            <View style={styles.menuDivider} />
+
+            <TouchableOpacity style={styles.menuItem} onPress={handleDeletePlaylist}>
+              <Ionicons name="trash-outline" size={22} color={COLORS.error} />
+              <Text style={[styles.menuItemText, { color: COLORS.error }]}>Delete Playlist</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   )
 }
@@ -436,5 +499,35 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 14,
     fontWeight: "700",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "flex-end",
+  },
+  menuContainer: {
+    backgroundColor: COLORS.backgroundLight,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingVertical: 16,
+    paddingBottom: 40,
+  },
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    gap: 14,
+  },
+  menuItemText: {
+    color: COLORS.text,
+    fontSize: 16,
+    fontWeight: "500",
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginVertical: 8,
+    marginHorizontal: 20,
   },
 })
